@@ -1,0 +1,27 @@
+CLIENT: Northline Retail Group | Engagement: Canada market entry assessment
+
+EXECUTIVE SUMMARY
+We recommend a phased market entry starting with Ontario e-commerce (Phase 1, Months 1–6), followed by two flagship stores in Toronto and Vancouver (Phase 2, Months 7–18). Expected Year-1 revenue: CAD 42M (base case), with break-even in Month 14.
+
+KEY ASSUMPTIONS
+- CAD/USD remains within 5% of current levels (source: BoC forward curve, Jan 2026).
+- Customer acquisition cost holds at CAD 38 (benchmark: comparable US apparel launches, Exhibit 3).
+- Regulatory approval for cross-border fulfillment completes by Q2 2026.
+
+EVIDENCE
+- TAM CAD 8.2B (StatCan Table 11-10, 2024).
+- Competitor share: Top 3 hold 61% (Euromonitor 2025, cited in Appendix B).
+- Pilot sensitivity: ±10% CAC shifts break-even by ±2 months (model tab "Sensitivity").
+
+RISKS & MITIGATIONS
+| Risk | Mitigation |
+|------|------------|
+| Supply chain delay | Dual-source contract with Vendor A (signed LOI) |
+| FX volatility | Natural hedge via local procurement (40% of COGS) |
+
+NEXT STEPS
+1. Legal: File import classification by Mar 15 (Owner: PMO).
+2. Ops: Confirm 3PL Toronto slot by Apr 1 (Owner: Supply Chain).
+3. Marketing: Launch awareness test CAD 250K (Owner: Brand), KPI: 2.1% CTR.
+
+All figures reconcile: Slide 4 revenue build equals Appendix A summary row "Total Y1".

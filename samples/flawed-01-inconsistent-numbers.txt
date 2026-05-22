@@ -1,0 +1,15 @@
+CLIENT: Apex Manufacturing | Cost reduction program
+
+RECOMMENDATION
+Cut SG&A by 15% through shared services — saves $12M annually.
+
+ANALYSIS
+Current SG&A is $80M. 15% reduction = $12M savings. New SG&A should be $68M.
+
+However, slide 7 states post-program SG&A will be $62M (22% reduction).
+Year-1 EBITDA uplift shown as $12M on slide 3 but $18M on slide 9.
+
+No evidence provided for achievable savings beyond "benchmark peers."
+Assumptions not listed. Risks section says "minimal execution risk" with no dependencies.
+
+NEXT STEPS: "Implement shared services soon."
