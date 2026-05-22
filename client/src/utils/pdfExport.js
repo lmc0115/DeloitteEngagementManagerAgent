@@ -29,28 +29,36 @@ function stripInlineMd(text) {
     .trim();
 }
 
+const FOOTER_RESERVE = 18;
+
 function ensureSpace(doc, y, needed = 20) {
-  if (y + needed > FOOTER_Y - 10) {
+  if (y + needed > FOOTER_Y - FOOTER_RESERVE) {
     doc.addPage();
-    drawPageFooter(doc);
     return MARGIN + 8;
   }
   return y;
 }
 
-function drawPageFooter(doc) {
-  const page = doc.internal.getNumberOfPages();
+function drawPageFooter(doc, pageNum, totalPages) {
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.gray500);
   doc.setFont(undefined, "normal");
   doc.text(
-    `Consulting Deliverable QA Package · Page ${page}`,
+    `Consulting Deliverable QA Package · Page ${pageNum} of ${totalPages}`,
     MARGIN,
     FOOTER_Y
   );
   doc.setDrawColor(...COLORS.green);
   doc.setLineWidth(0.8);
   doc.line(MARGIN, FOOTER_Y - 3, PAGE_WIDTH - MARGIN, FOOTER_Y - 3);
+}
+
+function applyFootersToAllPages(doc) {
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    drawPageFooter(doc, p, totalPages);
+  }
 }
 
 function drawCoverHeader(doc, y) {
@@ -169,7 +177,8 @@ function renderTable(doc, y, { headers, rows }, highlightSeverity = false) {
     startY: y,
     head,
     body,
-    margin: { left: MARGIN, right: MARGIN },
+    margin: { left: MARGIN, right: MARGIN, bottom: FOOTER_RESERVE },
+    showFoot: "never",
     tableWidth: CONTENT_WIDTH,
     theme: "grid",
     styles: {
@@ -376,11 +385,7 @@ export function generatePdf({
     y = renderChecklist(doc, y, checklistItems);
   }
 
-  const totalPages = doc.internal.getNumberOfPages();
-  for (let p = 1; p <= totalPages; p++) {
-    doc.setPage(p);
-    drawPageFooter(doc);
-  }
+  applyFootersToAllPages(doc);
 
   const parts = [];
   if (includeRubric) parts.push("rubric");
