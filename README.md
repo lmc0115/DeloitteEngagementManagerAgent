@@ -4,7 +4,7 @@
 
 ## What it does
 
-1. **Upload** deliverables (.txt, .md, .pdf, .docx)
+1. **Upload** deliverables (.txt, .md, .pdf, .docx, .xlsx, .pptx)
 2. **Review** against the default QA rubric (+ optional custom requirements)
 3. **Report** issues with severity (Critical / Major / Minor) and suggested fixes
 4. **Checklist** — human QC checklist with opinions (edit, delete, add items)
@@ -95,6 +95,7 @@ Prepare 10 “good” and 10 “flawed” mini-decks/memos, then for each:
 | 429 / quota errors | Wait per `retryDelay` (~30–60s). Try `gemma-4-26b-a4b-it` if TPM limits hit you on Gemini; space requests (~15/min on Gemma). See [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) |
 | Empty PDF report section | Run **Run QA review** before exporting report |
 | .doc not supported | Save as .docx or .pdf |
+| .xls / .ppt not supported | Save as .xlsx / .pptx or .pdf |
 
 ## License
 

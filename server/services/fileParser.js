@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
+import { OfficeParser } from "officeparser";
 
 const TEXT_EXTENSIONS = new Set([
   ".txt",
@@ -31,14 +32,31 @@ export async function extractTextFromFile(filePath, originalName) {
     return result.value || "";
   }
 
+  if (ext === ".xlsx" || ext === ".pptx") {
+    const ast = await OfficeParser.parseOffice(filePath);
+    return ast.toText() || "";
+  }
+
   if (ext === ".doc") {
     throw new Error(
       "Legacy .doc files are not supported. Please save as .docx or .pdf."
     );
   }
 
+  if (ext === ".xls") {
+    throw new Error(
+      "Legacy .xls files are not supported. Please save as .xlsx or .pdf."
+    );
+  }
+
+  if (ext === ".ppt") {
+    throw new Error(
+      "Legacy .ppt files are not supported. Please save as .pptx or .pdf."
+    );
+  }
+
   throw new Error(
-    `Unsupported file type "${ext}". Supported: .txt, .md, .pdf, .docx`
+    `Unsupported file type "${ext}". Supported: .txt, .md, .pdf, .docx, .xlsx, .pptx`
   );
 }
 

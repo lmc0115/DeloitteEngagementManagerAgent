@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 const ACCEPT =
-  ".txt,.md,.markdown,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  ".txt,.md,.markdown,.pdf,.docx,.xlsx,.pptx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 export default function FileUpload({ files, onFilesChange }) {
   const inputRef = useRef(null);
@@ -34,8 +34,8 @@ export default function FileUpload({ files, onFilesChange }) {
         <span className="card-badge">Step 1</span>
       </div>
       <p className="card-sub">
-        Mini-decks or memos — .txt, .md, .pdf, or .docx (max 15 MB each, up to 10
-        files)
+        Mini-decks or memos — .txt, .md, .pdf, .docx, .xlsx, or .pptx (max 15 MB
+        each, up to 10 files)
       </p>
 
       <div

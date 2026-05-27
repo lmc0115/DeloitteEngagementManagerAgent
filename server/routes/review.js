@@ -49,7 +49,7 @@ router.post("/review", upload.array("files", 10), async (req, res) => {
     if (empty.length === documents.length) {
       return res.status(400).json({
         error:
-          "Could not extract text from uploaded files. Try .txt, .md, .pdf, or .docx.",
+          "Could not extract text from uploaded files. Try .txt, .md, .pdf, .docx, .xlsx, or .pptx.",
       });
     }
 
