@@ -73,7 +73,7 @@ export default function PdfExportPanel({
             checked={includeChecklist}
             onChange={(e) => setIncludeChecklist(e.target.checked)}
           />
-          Consulting QC checklist with opinions
+          Human QC checklist (issues + your decisions)
         </label>
       </div>
 

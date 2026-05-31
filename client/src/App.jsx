@@ -8,20 +8,11 @@ import PdfExportPanel from "./components/PdfExportPanel.jsx";
 const WORKFLOW = [
   "Create deliverable",
   "LLM QA review",
+  "Category scorecard",
   "Flag issues",
   "Assign severity",
-  "Suggest fixes",
   "Human decides",
 ];
-
-function checklistFromDefaults(items) {
-  return items.map((text, i) => ({
-    id: `default-${i}`,
-    text,
-    opinion: "",
-    isCustom: false,
-  }));
-}
 
 export default function App() {
   const [files, setFiles] = useState([]);
@@ -36,17 +27,10 @@ export default function App() {
   useEffect(() => {
     async function loadConfig() {
       try {
-        const [rubricRes, checklistRes] = await Promise.all([
-          fetch("/api/rubric"),
-          fetch("/api/checklist"),
-        ]);
+        const rubricRes = await fetch("/api/rubric");
         if (rubricRes.ok) {
           const data = await rubricRes.json();
           setRubric(data.content);
-        }
-        if (checklistRes.ok) {
-          const data = await checklistRes.json();
-          setChecklistItems(checklistFromDefaults(data.items));
         }
       } catch (e) {
         console.error(e);
@@ -64,6 +48,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     setReport(null);
+    setChecklistItems([]);
 
     const form = new FormData();
     files.forEach((f) => form.append("files", f));
@@ -78,10 +63,12 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || "Review failed");
 
       setReport(data.report);
+      setChecklistItems(data.checklistItems || []);
       setReportMeta({
         model: data.model,
         reviewedAt: data.reviewedAt,
         fileNames: data.fileNames,
+        outputTruncated: data.outputTruncated,
       });
     } catch (e) {
       setError(e.message);
@@ -105,9 +92,9 @@ export default function App() {
           </div>
           <h1>Deliverable QA Reviewer</h1>
           <p className="lead">
-            LLM quality control for partner-ready mini-decks and memos — flags
-            issues, assigns severity, and suggests fixes. You decide what to
-            change before review.
+            LLM quality control for partner-ready mini-decks and memos — scores
+            eight categories, flags issues with severity, and suggests fixes.
+            You decide what to change before review.
           </p>
           <div className="workflow">
             {WORKFLOW.map((step, i) => (
@@ -157,6 +144,7 @@ export default function App() {
         <ChecklistPanel
           items={checklistItems}
           onItemsChange={setChecklistItems}
+          hasReport={Boolean(report)}
         />
 
         <PdfExportPanel
@@ -164,7 +152,7 @@ export default function App() {
           customRubric={customRubric}
           report={report}
           reportMeta={reportMeta}
-          checklistItems={checklistItems.filter((i) => i.text.trim())}
+          checklistItems={checklistItems.filter((i) => i.text?.trim())}
           uploadedFileNames={metaFileNames}
         />
       </main>

@@ -7,7 +7,7 @@
 1. **Upload** deliverables (.txt, .md, .pdf, .docx, .xlsx, .pptx)
 2. **Review** against the default QA rubric (+ optional custom requirements)
 3. **Report** issues with severity (Critical / Major / Minor) and suggested fixes
-4. **Checklist** — human QC checklist with opinions (edit, delete, add items)
+4. **Human QC checklist** — auto-filled from **Issues Found** in the report; you record whether to modify as suggested
 5. **Export PDF** — rubric, AI report, checklist, or any combination (includes uploaded file names)
 
 ## Workflow
@@ -24,9 +24,11 @@ Human decides what to change
 
 ## Customize the rubric (important)
 
-Edit **`prompts/qa-rubric.md`** to change categories, severity definitions, examples, or reviewer instructions. Restart the server after edits.
+Edit **`prompts/qa-rubric.md`** to change categories, weights, scoring levels, severity rules, or override logic. Edit **`prompts/output-format.md`** to change report structure. Restart the server after edits.
 
-Default checklist items live in **`config/default-qc-checklist.json`**.
+Default checklist items live in **`config/default-qc-checklist.json`** (legacy; the UI now builds the checklist from review report issues).
+
+When a review completes, the AI agent returns a structured **QC checklist** (JSON) alongside the report. If that block is missing, the server asks the model again to generate checklist items from the report text.
 
 ## Setup (Google AI Studio free tier)
 
@@ -69,9 +71,10 @@ Serves the built UI from the API server at http://localhost:3001
 
 | Course deliverable | In this repo |
 |--------------------|--------------|
-| QA rubric + severity + examples | `prompts/qa-rubric.md` |
+| QA rubric + severity + weighted scoring | `prompts/qa-rubric.md` |
+| AI reviewer output format (scorecard, issues) | `prompts/output-format.md` |
 | Prototype reviewer + scored results | Run review on 20 sample artifacts; save reports / PDFs |
-| Consulting QC checklist (human fallback) | `config/default-qc-checklist.json` + UI checklist section |
+| Consulting QC checklist (human decisions on flagged issues) | AI-generated `checklistItems` from review API + UI checklist section |
 
 ## Benchmark testing (20 artifacts)
 

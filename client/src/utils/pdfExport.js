@@ -143,10 +143,12 @@ function addSectionBanner(doc, y, title, subtitle) {
   return y + 14;
 }
 
-function addWrappedText(doc, text, x, y, maxWidth, lineHeight = 5) {
+function addWrappedText(doc, text, x, y, maxWidth, lineHeight = 5, { noPageBreak = false } = {}) {
   const lines = doc.splitTextToSize(stripInlineMd(text), maxWidth);
   for (const line of lines) {
-    y = ensureSpace(doc, y, lineHeight + 2);
+    if (!noPageBreak) {
+      y = ensureSpace(doc, y, lineHeight + 2);
+    }
     doc.text(line, x, y);
     y += lineHeight;
   }
@@ -224,15 +226,74 @@ function renderTable(doc, y, { headers, rows }, highlightSeverity = false) {
   return doc.lastAutoTable.finalY + 8;
 }
 
+function measurePanelHeight(doc, lines, textWidth) {
+  let height = 10;
+  for (const line of lines) {
+    const fontSize = line.kind === "heading" ? 9.5 : 8.5;
+    const lineHeight = line.kind === "heading" ? 4.8 : 4.5;
+    doc.setFontSize(fontSize);
+    const prefix = line.kind === "bullet" ? "•  " : "";
+    const wrapped = doc.splitTextToSize(`${prefix}${line.text}`, textWidth);
+    height += wrapped.length * lineHeight + (line.kind === "heading" ? 1 : 0.5);
+  }
+  return height;
+}
+
+function renderExamplePanel(doc, y, lines) {
+  if (!lines?.length) return y;
+
+  const panelX = MARGIN;
+  const panelPad = 5;
+  const textX = panelX + panelPad + 2;
+  const textWidth = CONTENT_WIDTH - panelPad * 2 - 4;
+  const panelH = measurePanelHeight(doc, lines, textWidth);
+
+  y = ensureSpace(doc, y, panelH);
+  const startY = y;
+
+  doc.setFillColor(...COLORS.greenSoft);
+  doc.rect(panelX, startY, CONTENT_WIDTH, panelH, "F");
+  doc.setFillColor(...COLORS.green);
+  doc.rect(panelX, startY, 2, panelH, "F");
+
+  let innerY = startY + panelPad;
+  for (const line of lines) {
+    if (line.kind === "heading") {
+      doc.setFontSize(9.5);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(...COLORS.charcoal);
+      innerY = addWrappedText(doc, line.text, textX, innerY, textWidth, 4.8, {
+        noPageBreak: true,
+      });
+      innerY += 1;
+      doc.setFont(undefined, "normal");
+      continue;
+    }
+
+    doc.setFontSize(8.5);
+    doc.setFont(undefined, "normal");
+    doc.setTextColor(...COLORS.charcoal);
+    const prefix = line.kind === "bullet" ? "•  " : "";
+    innerY = addWrappedText(doc, `${prefix}${line.text}`, textX, innerY, textWidth, 4.5, {
+      noPageBreak: true,
+    });
+    innerY += 0.5;
+  }
+
+  return startY + panelH + 4;
+}
+
 function renderMarkdownBlocks(doc, y, markdown, options = {}) {
-  const blocks = parseMarkdownForPdf(markdown);
+  const blocks = parseMarkdownForPdf(markdown, {
+    forReport: options.forReport ?? false,
+  });
   const { highlightSeverity = false } = options;
 
   for (const block of blocks) {
     switch (block.type) {
       case "heading": {
         y = ensureSpace(doc, y, 12);
-        const sizes = { 1: 13, 2: 11, 3: 10 };
+        const sizes = { 1: 13, 2: 11, 3: 10, 4: 9.5 };
         const size = sizes[block.level] || 10;
         if (block.level <= 2) {
           doc.setDrawColor(...COLORS.green);
@@ -258,9 +319,8 @@ function renderMarkdownBlocks(doc, y, markdown, options = {}) {
         y = ensureSpace(doc, y, 8);
         doc.setFontSize(9);
         doc.setTextColor(...COLORS.charcoal);
-        const bullet = block.ordered ? "•" : "•";
         const lines = doc.splitTextToSize(
-          `${bullet}  ${stripInlineMd(block.text)}`,
+          `•  ${stripInlineMd(block.text)}`,
           CONTENT_WIDTH - 6
         );
         for (const line of lines) {
@@ -271,17 +331,21 @@ function renderMarkdownBlocks(doc, y, markdown, options = {}) {
         y += 1;
         break;
       }
-      case "blockquote": {
-        y = ensureSpace(doc, y, 14);
-        doc.setFillColor(...COLORS.greenSoft);
-        const lines = doc.splitTextToSize(stripInlineMd(block.text), CONTENT_WIDTH - 12);
-        const h = lines.length * 4.5 + 6;
-        doc.rect(MARGIN, y - 3, CONTENT_WIDTH, h, "F");
-        doc.setFillColor(...COLORS.green);
-        doc.rect(MARGIN, y - 3, 2, h, "F");
-        doc.setFontSize(8.5);
-        doc.setTextColor(...COLORS.gray500);
-        doc.text(lines, MARGIN + 5, y + 2);
+      case "examplePanel":
+        y = renderExamplePanel(doc, y, block.lines);
+        break;
+      case "blockquote":
+        y = renderExamplePanel(doc, y, [{ kind: "text", text: stripInlineMd(block.text) }]);
+        break;
+      case "code": {
+        y = ensureSpace(doc, y, 12);
+        doc.setFillColor(...COLORS.gray100);
+        doc.setFontSize(8);
+        doc.setTextColor(...COLORS.charcoal);
+        const codeLines = doc.splitTextToSize(stripInlineMd(block.text), CONTENT_WIDTH - 10);
+        const h = codeLines.length * 4.2 + 6;
+        doc.rect(MARGIN, y, CONTENT_WIDTH, h, "F");
+        doc.text(codeLines, MARGIN + 4, y + 5);
         y += h + 4;
         break;
       }
@@ -308,15 +372,23 @@ function renderMarkdownBlocks(doc, y, markdown, options = {}) {
 }
 
 function renderChecklist(doc, y, items) {
-  y = addSectionBanner(doc, y, "Consulting QC Checklist", "Human fallback review");
+  y = addSectionBanner(doc, y, "Human QC Checklist", "Issues from AI report — human decisions");
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    y = ensureSpace(doc, y, 22);
+    const title = item.category
+      ? `${item.category}${item.location ? ` · ${item.location}` : ""}`
+      : stripInlineMd(item.text);
+    const severity = item.severity ? ` · ${item.severity}` : "";
+    const problem = item.problem || stripInlineMd(item.text);
+    const fix = item.suggestedFix?.trim();
+    const opinion = item.opinion?.trim() || "(not provided)";
+
+    y = ensureSpace(doc, y, 36);
 
     doc.setDrawColor(...COLORS.gray300);
     doc.setFillColor(...COLORS.white);
-    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 18, 1.5, 1.5, "FD");
+    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 32, 1.5, 1.5, "FD");
 
     doc.setFillColor(...COLORS.charcoal);
     doc.roundedRect(MARGIN + 2, y + 2, 7, 7, 1, 1, "F");
@@ -328,17 +400,30 @@ function renderChecklist(doc, y, items) {
     doc.setTextColor(...COLORS.charcoal);
     doc.setFontSize(9);
     doc.setFont(undefined, "bold");
-    const titleLines = doc.splitTextToSize(stripInlineMd(item.text), CONTENT_WIDTH - 16);
-    doc.text(titleLines.slice(0, 2), MARGIN + 12, y + 6);
+    const titleLines = doc.splitTextToSize(`${title}${severity}`, CONTENT_WIDTH - 16);
+    doc.text(titleLines.slice(0, 1), MARGIN + 12, y + 6);
 
     doc.setFont(undefined, "normal");
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.gray500);
-    const opinion = item.opinion?.trim() || "(not provided)";
-    const opLines = doc.splitTextToSize(`Opinion: ${opinion}`, CONTENT_WIDTH - 14);
-    doc.text(opLines.slice(0, 2), MARGIN + 12, y + 12);
+    const problemLines = doc.splitTextToSize(problem, CONTENT_WIDTH - 14);
+    doc.text(problemLines.slice(0, 2), MARGIN + 12, y + 11);
 
-    y += 20;
+    if (fix) {
+      doc.setTextColor(...COLORS.gray500);
+      const fixLines = doc.splitTextToSize(`Suggested fix: ${fix}`, CONTENT_WIDTH - 14);
+      doc.text(fixLines.slice(0, 1), MARGIN + 12, y + 19);
+    }
+
+    doc.setTextColor(...COLORS.charcoal);
+    doc.setFont(undefined, "bold");
+    doc.text("Human decision:", MARGIN + 12, y + 25);
+    doc.setFont(undefined, "normal");
+    doc.setTextColor(...COLORS.gray500);
+    const opLines = doc.splitTextToSize(opinion, CONTENT_WIDTH - 38);
+    doc.text(opLines.slice(0, 2), MARGIN + 38, y + 25);
+
+    y += 34;
   }
 
   return y;
@@ -377,7 +462,10 @@ export function generatePdf({
       "AI QA Review Report",
       "Issues flagged with severity and suggested fixes"
     );
-    y = renderMarkdownBlocks(doc, y, reportText, { highlightSeverity: true });
+    y = renderMarkdownBlocks(doc, y, reportText, {
+      highlightSeverity: true,
+      forReport: true,
+    });
     y += 4;
   }
 

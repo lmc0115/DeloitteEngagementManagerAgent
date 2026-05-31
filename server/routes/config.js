@@ -2,7 +2,7 @@ import { Router } from "express";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import { loadRubricPrompt } from "../services/gemini.js";
+import { loadRubricForDisplay } from "../services/gemini.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -12,7 +12,7 @@ const router = Router();
 
 router.get("/rubric", async (_req, res) => {
   try {
-    const content = await loadRubricPrompt();
+    const content = await loadRubricForDisplay();
     res.json({ content });
   } catch (err) {
     res.status(500).json({ error: err.message });

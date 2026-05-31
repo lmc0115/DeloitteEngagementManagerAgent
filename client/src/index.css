@@ -205,6 +205,17 @@ input {
   margin-bottom: 0.35rem;
 }
 
+.card-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-expand {
+  white-space: nowrap;
+}
+
 .card h2 {
   margin: 0;
   font-size: 1.2rem;
@@ -299,13 +310,397 @@ input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem 1.5rem;
-  max-height: 420px;
+  max-height: 560px;
   overflow-y: auto;
+}
+
+/* Keep weight % and level codes (L1, N2, CF2) on one line in rubric tables */
+.rubric-preview .md-table td:first-child {
+  white-space: nowrap;
+}
+
+.rubric-preview .md-table:not(:has(th:nth-child(3))) td:nth-child(2) {
+  white-space: nowrap;
+  min-width: 2.5rem;
+}
+
+.rubric-preview .md-table:has(th:nth-child(3)):not(:has(th:nth-child(4))) td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.rubric-preview .md-table:has(th:nth-child(4)) {
+  min-width: 640px;
+}
+
+.rubric-preview .md-table:has(th:nth-child(4)) td {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.rubric-preview .md-table:has(th:nth-child(4)) td:first-child {
+  white-space: nowrap;
+  font-weight: 600;
 }
 
 .report-content.prose-panel {
   max-height: none;
   background: var(--d-white);
+}
+
+.report-document {
+  background: var(--d-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem 1.75rem;
+  font-family: var(--font);
+}
+
+.report-preview {
+  max-height: none;
+  overflow: visible;
+}
+
+.report-truncation-banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fff4e5;
+  border: 1px solid #fcd9a0;
+  border-left: 4px solid var(--major);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--d-charcoal);
+}
+
+/* Report summary bar */
+.report-summary-bar {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 1rem 1.5rem;
+  align-items: start;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--d-green-soft) 0%, var(--d-white) 100%);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--d-green);
+  border-radius: var(--radius);
+}
+
+.report-summary-score,
+.report-summary-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.report-summary-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.report-summary-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--d-charcoal);
+}
+
+.report-summary-verdict.verdict-ready .report-summary-value {
+  color: #2d6a12;
+}
+
+.report-summary-verdict.verdict-minor .report-summary-value {
+  color: #b45309;
+}
+
+.report-summary-verdict.verdict-revision .report-summary-value {
+  color: #c2410c;
+}
+
+.report-summary-verdict.verdict-not-ready .report-summary-value {
+  color: var(--critical);
+}
+
+.report-summary-rationale {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--d-gray-700);
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Report markdown typography */
+.markdown-report {
+  font-family: var(--font);
+  font-size: 0.925rem;
+  line-height: 1.65;
+  color: var(--d-charcoal);
+}
+
+.markdown-report .report-section-title {
+  font-size: 1.1rem;
+  margin-top: 2rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 2px solid var(--d-green);
+}
+
+.markdown-report .report-section-title:first-child {
+  margin-top: 0;
+}
+
+.markdown-report .report-subsection-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--d-charcoal);
+  margin-top: 1.35rem;
+  padding-left: 0.65rem;
+  border-left: 3px solid var(--d-green);
+}
+
+.markdown-report .md-p {
+  margin-bottom: 0.85rem;
+}
+
+.markdown-report .md-ul,
+.markdown-report .md-ol {
+  margin-bottom: 1.1rem;
+}
+
+.markdown-report .md-li {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-report .md-li::marker {
+  color: var(--d-green);
+}
+
+.markdown-report .report-callout {
+  background: var(--d-gray-100);
+  border-left-color: var(--d-gray-500);
+  font-size: 0.875rem;
+}
+
+.markdown-report .md-pre,
+.markdown-report pre,
+.markdown-report .md-report-prose {
+  font-family: var(--font);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.markdown-report .md-pre {
+  background: var(--d-gray-100);
+  color: var(--d-charcoal);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 1rem 1.15rem;
+}
+
+.markdown-report .md-report-prose {
+  margin: 0.75rem 0 1rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.markdown-report .md-unwrapped-report {
+  margin: 0.75rem 0 1rem;
+}
+
+.markdown-report .md-table {
+  font-size: 0.875rem;
+}
+
+.markdown-report .md-code-inline {
+  font-family: var(--font);
+}
+
+/* —— Report expand modal —— */
+.report-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.report-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1400px, 100%);
+  height: 100%;
+  background: var(--d-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.report-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--d-gray-100);
+  flex-shrink: 0;
+}
+
+.report-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.report-modal-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.report-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.5rem 2rem 2rem;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+}
+
+.report-modal-body .markdown-body {
+  font-size: 0.95rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .report-modal-overlay {
+    padding: 0;
+  }
+
+  .report-modal {
+    border-radius: 0;
+  }
+
+  .report-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.85rem 1rem;
+  }
+
+  .report-modal-close {
+    width: 100%;
+  }
+
+  .report-modal-body {
+    padding: 1rem 1.1rem 1.5rem;
+  }
+}
+
+/* —— Rubric expand modal —— */
+.rubric-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.rubric-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1400px, 100%);
+  height: 100%;
+  max-height: none;
+  background: var(--d-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.rubric-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--d-gray-100);
+  flex-shrink: 0;
+}
+
+.rubric-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--d-charcoal);
+}
+
+.rubric-modal-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.rubric-modal-close {
+  flex-shrink: 0;
+}
+
+.rubric-modal-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  overflow-y: auto;
+  padding: 1.5rem 2rem 2rem;
+  background: var(--d-white);
+  font-size: 0.95rem;
+}
+
+.rubric-modal-body .markdown-body {
+  font-size: 0.95rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .rubric-modal-overlay {
+    padding: 0;
+  }
+
+  .rubric-modal {
+    border-radius: 0;
+  }
+
+  .rubric-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.85rem 1rem;
+  }
+
+  .rubric-modal-body {
+    padding: 1rem 1.1rem 1.5rem;
+  }
+
+  .rubric-modal-close {
+    width: 100%;
+  }
 }
 
 .muted {
@@ -339,6 +734,12 @@ input {
   color: var(--d-gray-700);
 }
 
+.markdown-body .md-h4 {
+  font-size: 0.9rem;
+  margin: 1rem 0 0.4rem;
+  color: var(--d-gray-700);
+}
+
 .markdown-body .md-p {
   margin: 0 0 0.75rem;
 }
@@ -354,12 +755,27 @@ input {
 }
 
 .markdown-body .md-blockquote {
-  margin: 0.75rem 0;
-  padding: 0.65rem 1rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--border);
   border-left: 4px solid var(--d-green);
-  background: var(--d-green-soft);
-  color: var(--d-gray-700);
-  font-size: 0.85rem;
+  border-radius: var(--radius);
+  background: var(--d-white);
+  color: var(--d-charcoal);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.markdown-body .md-blockquote .md-h3,
+.markdown-body .md-blockquote .md-h4 {
+  margin-top: 0;
+  color: var(--d-charcoal);
+}
+
+.markdown-body .md-blockquote .md-p:last-child,
+.markdown-body .md-blockquote .md-ul:last-child,
+.markdown-body .md-blockquote .md-ol:last-child {
+  margin-bottom: 0;
 }
 
 .markdown-body .md-code-inline {
@@ -504,6 +920,14 @@ input {
 }
 
 /* —— Checklist —— */
+.checklist-empty {
+  padding: 1rem 1.15rem;
+  background: var(--d-gray-100);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+}
+
 .checklist-item {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -513,8 +937,21 @@ input {
   border-left: 3px solid var(--d-gray-300);
 }
 
+.checklist-item.severity-border-1 {
+  border-left-color: var(--critical);
+}
+
+.checklist-item.severity-border-2 {
+  border-left-color: var(--major);
+}
+
+.checklist-item.severity-border-3 {
+  border-left-color: var(--minor);
+}
+
 .checklist-item:focus-within {
-  border-left-color: var(--d-green);
+  border-left-width: 4px;
+  box-shadow: var(--shadow);
 }
 
 .checklist-item-header {
@@ -523,17 +960,69 @@ input {
   align-items: flex-start;
 }
 
-.checklist-item-header p {
+.checklist-issue-body {
   flex: 1;
+  min-width: 0;
+}
+
+.checklist-issue-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.checklist-issue-title {
   margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--d-charcoal);
+  line-height: 1.35;
+}
+
+.checklist-issue-location {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.checklist-issue-problem {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
   color: var(--d-charcoal);
 }
 
+.checklist-issue-impact,
+.checklist-issue-fix {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--d-gray-700);
+}
+
+.checklist-issue-fix {
+  padding: 0.55rem 0.75rem;
+  background: var(--d-green-soft);
+  border-radius: var(--radius);
+  margin-bottom: 0;
+}
+
+.checklist-opinion-label {
+  display: block;
+  margin-top: 0.85rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .checklist-item textarea {
-  min-height: 64px;
-  margin-top: 0.65rem;
+  min-height: 72px;
+  margin-top: 0;
   resize: vertical;
 }
 
@@ -614,20 +1103,50 @@ input {
 
 /* —— Report meta —— */
 .report-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
   margin-bottom: 1.25rem;
-  padding: 0.75rem 1rem;
+}
+
+.report-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
   background: var(--d-gray-100);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
-.report-meta strong {
+.report-meta-item-wide {
+  grid-column: span 2;
+}
+
+.report-meta-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.report-meta-value {
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--d-charcoal);
-  margin-right: 0.25rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .report-meta-item-wide {
+    grid-column: span 1;
+  }
+
+  .report-summary-bar {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* —— States —— */
