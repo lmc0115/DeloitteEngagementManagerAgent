@@ -118,12 +118,16 @@ Review the deliverable(s) above and write the **completed QA report** (not a pla
 
 Your response **must begin** with:
 
-## Overall Assessment
+## Header
+
+Then continue with ## Overall Assessment and all remaining sections in order.
 
 Rules:
 - Score the deliverable using the rubric; cite specific content from the files.
+- In Header, list every filename from the Deliverables section above.
 - Do **not** repeat rubric category weights (e.g. "Logic 20%"), output-format section names, or these instructions.
 - Do **not** list what you will do — write the full report with scores, issues, and fixes.
+- Apply v2 severity rules: approximate/hedged figures → Minor; unsourced statistics → Critical.
 - Follow the output format, then append \`---QC_CHECKLIST_JSON---\` and the JSON array.
 `;
 }
@@ -136,7 +140,7 @@ One object per distinct issue the human should decide on. Use this exact schema:
   {
     "issueNumber": 1,
     "category": "Numbers",
-    "severity": "Severity 1 - Critical",
+    "severity": "Severity 1 – Critical",
     "severityLevel": "1",
     "location": "Paragraph 1",
     "problem": "What is wrong",
@@ -218,6 +222,7 @@ function isOutputTruncated(response, reportMarkdown) {
 
 function looksLikePromptEcho(text) {
   const body = String(text || "").trim();
+  if (/^##\s+Header/im.test(body)) return false;
   if (/^##\s+Overall Assessment/im.test(body)) return false;
   if (/^##\s+Category Scorecard/im.test(body)) return false;
 
@@ -240,7 +245,7 @@ async function generateForModel(model, prompt, { systemInstruction, maxTokens } 
         `You are a senior consulting partner performing QA on deliverables.
 Write a completed QA report about the uploaded deliverable content.
 Never repeat rubric weights, instruction lists, or output-format section names.
-Begin with ## Overall Assessment. Output raw Markdown, then ---QC_CHECKLIST_JSON--- and JSON.`,
+Begin with ## Header, then ## Overall Assessment. Output raw Markdown, then ---QC_CHECKLIST_JSON--- and JSON.`,
       temperature: 0.3,
       maxOutputTokens: maxTokens ?? MAX_OUTPUT_TOKENS,
     },
