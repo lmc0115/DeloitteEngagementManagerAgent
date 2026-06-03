@@ -36,7 +36,8 @@ export default function ChecklistPanel({ items, onItemsChange, hasReport }) {
 
       {hasReport && items.length === 0 && (
         <p className="checklist-empty muted">
-          No issues were identified in the review report.
+          No issues were identified in the review report, or the checklist could not be
+          extracted. Re-run the review if you expected flagged issues.
         </p>
       )}
 

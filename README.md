@@ -97,6 +97,7 @@ Prepare 10 “good” and 10 “flawed” mini-decks/memos, then for each:
 | `GEMINI_API_KEY is not set` | Create `.env` from `.env.example` |
 | 429 / quota errors | Wait per `retryDelay` (~30–60s). Try `gemma-4-26b-a4b-it` if TPM limits hit you on Gemini; space requests (~15/min on Gemma). See [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) |
 | Empty PDF report section | Run **Run QA review** before exporting report |
+| Report truncated / incomplete | Raise `GEMINI_MAX_OUTPUT_TOKENS` in `.env` (default 32768; try `65536` or `unlimited`). Prefer `gemini-2.0-flash-lite` if Gemma hits limits |
 | .doc not supported | Save as .docx or .pdf |
 | .xls / .ppt not supported | Save as .xlsx / .pptx or .pdf |
 

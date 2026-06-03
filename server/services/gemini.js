@@ -27,7 +27,16 @@ const FALLBACK_MODELS = (
   .map((m) => m.trim())
   .filter(Boolean);
 
-const MAX_OUTPUT_TOKENS = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS) || 8192;
+function resolveMaxOutputTokens(override) {
+  if (override != null && Number(override) > 0) return Number(override);
+
+  const raw = process.env.GEMINI_MAX_OUTPUT_TOKENS;
+  if (raw === undefined || String(raw).trim() === "") return 32768;
+  if (/^(0|unlimited|max|none)$/i.test(String(raw).trim())) return null;
+
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 32768;
+}
 const MAX_INPUT_CHARS = Number(process.env.GEMINI_MAX_INPUT_CHARS) || 28000;
 
 function getModelsToTry() {
@@ -236,19 +245,24 @@ function looksLikePromptEcho(text) {
 }
 
 async function generateForModel(model, prompt, { systemInstruction, maxTokens } = {}) {
-  return getClient().models.generateContent({
-    model,
-    contents: prompt,
-    config: {
-      systemInstruction:
-        systemInstruction ??
-        `You are a senior consulting partner performing QA on deliverables.
+  const resolved = resolveMaxOutputTokens(maxTokens);
+  const config = {
+    systemInstruction:
+      systemInstruction ??
+      `You are a senior consulting partner performing QA on deliverables.
 Write a completed QA report about the uploaded deliverable content.
 Never repeat rubric weights, instruction lists, or output-format section names.
 Begin with ## Header, then ## Overall Assessment. Output raw Markdown, then ---QC_CHECKLIST_JSON--- and JSON.`,
-      temperature: 0.3,
-      maxOutputTokens: maxTokens ?? MAX_OUTPUT_TOKENS,
-    },
+    temperature: 0.3,
+  };
+  if (resolved != null) {
+    config.maxOutputTokens = resolved;
+  }
+
+  return getClient().models.generateContent({
+    model,
+    contents: prompt,
+    config,
   });
 }
 
@@ -338,7 +352,6 @@ export async function runReview({ documents, customRubric }) {
   const {
     reportMarkdown: reportBody,
     checklistItems: parsedChecklist,
-    hasChecklistJson,
   } = splitReviewResponse(rawText);
 
   let reportText = prepareReportMarkdown(reportBody);
@@ -352,7 +365,13 @@ export async function runReview({ documents, customRubric }) {
   }
 
   let checklistItems = parsedChecklist;
-  if (!hasChecklistJson) {
+
+  // Model often emits ---QC_CHECKLIST_JSON--- but truncates JSON or returns [] while Issues Found has rows.
+  if (checklistItems.length === 0) {
+    checklistItems = parseIssuesFromReport(reportText);
+  }
+
+  if (checklistItems.length === 0) {
     checklistItems = await generateChecklistFallback(reportText, modelUsed);
   }
 
