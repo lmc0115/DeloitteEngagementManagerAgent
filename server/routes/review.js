@@ -43,6 +43,7 @@ router.post("/review", upload.array("files", 10), async (req, res) => {
     }
 
     const customRubric = req.body.customRubric || "";
+    const lang = req.body.lang === "fr" ? "fr" : "en";
     const documents = await extractFromUploadedFiles(uploaded);
 
     const empty = documents.filter((d) => !d.text);
@@ -53,7 +54,7 @@ router.post("/review", upload.array("files", 10), async (req, res) => {
       });
     }
 
-    const result = await runReview({ documents, customRubric });
+    const result = await runReview({ documents, customRubric, lang });
     res.json(result);
   } catch (err) {
     console.error(err);

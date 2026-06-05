@@ -9,9 +9,18 @@ import { GoogleGenAI } from "@google/genai";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
-const RUBRIC_PATH = path.join(ROOT, "prompts", "qa-rubric.md");
-const OUTPUT_FORMAT_PATH = path.join(ROOT, "prompts", "output-format.md");
-const QC_CHECKLIST_PROMPT_PATH = path.join(ROOT, "prompts", "qc-checklist-prompt.md");
+const PROMPTS_DIR = path.join(ROOT, "prompts");
+
+function resolvePromptPath(baseName, lang) {
+  if (lang === "fr") {
+    return path.join(PROMPTS_DIR, `${baseName}.fr.md`);
+  }
+  return path.join(PROMPTS_DIR, `${baseName}.md`);
+}
+
+function normalizeLang(lang) {
+  return lang === "fr" ? "fr" : "en";
+}
 
 let ai;
 function getClient() {
@@ -43,22 +52,22 @@ function getModelsToTry() {
   return [...new Set([PRIMARY_MODEL, ...FALLBACK_MODELS])];
 }
 
-export async function loadRubricPrompt() {
-  return fs.readFile(RUBRIC_PATH, "utf-8");
+export async function loadRubricPrompt(lang = "en") {
+  return fs.readFile(resolvePromptPath("qa-rubric", normalizeLang(lang)), "utf-8");
 }
 
-export async function loadOutputFormatPrompt() {
-  return fs.readFile(OUTPUT_FORMAT_PATH, "utf-8");
+export async function loadOutputFormatPrompt(lang = "en") {
+  return fs.readFile(resolvePromptPath("output-format", normalizeLang(lang)), "utf-8");
 }
 
-export async function loadQcChecklistPrompt() {
-  return fs.readFile(QC_CHECKLIST_PROMPT_PATH, "utf-8");
+export async function loadQcChecklistPrompt(lang = "en") {
+  return fs.readFile(resolvePromptPath("qc-checklist-prompt", normalizeLang(lang)), "utf-8");
 }
 
-export async function loadRubricForDisplay() {
+export async function loadRubricForDisplay(lang = "en") {
   const [rubric, outputFormat] = await Promise.all([
-    loadRubricPrompt(),
-    loadOutputFormatPrompt(),
+    loadRubricPrompt(lang),
+    loadOutputFormatPrompt(lang),
   ]);
   return `${rubric.trim()}\n\n---\n\n${outputFormat.trim()}\n`;
 }
@@ -86,7 +95,7 @@ function truncateDocuments(documents, budget) {
   }));
 }
 
-function buildReviewPrompt(rubric, outputFormat, qcChecklistPrompt, customRubric, documents) {
+function buildReviewPrompt(rubric, outputFormat, qcChecklistPrompt, customRubric, documents, lang = "en") {
   const reviewRubric = compactRubricForReview(rubric);
   const truncated = truncateDocuments(documents, MAX_INPUT_CHARS);
   const docBlock = truncated
@@ -99,11 +108,33 @@ function buildReviewPrompt(rubric, outputFormat, qcChecklistPrompt, customRubric
     .join("\n\n---\n\n");
 
   const customBlock = customRubric?.trim()
-    ? `\n## Additional reviewer requirements (from user)\n\n${customRubric.trim()}\n`
+    ? `\n## ${lang === "fr" ? "Exigences supplémentaires du réviseur (utilisateur)" : "Additional reviewer requirements (from user)"}\n\n${customRubric.trim()}\n`
     : "";
+
+  const languageBlock =
+    lang === "fr"
+      ? `\n## Langue de sortie\n\nRédigez **l'intégralité** du rapport QA en **français** (titres de sections, verdicts, justifications, problèmes, corrections). Utilisez les libellés du format de sortie français.\n`
+      : "";
+
+  const deliverablesHeading =
+    lang === "fr" ? "## Livrables à revoir" : "## Deliverables to review";
+  const taskHeading = lang === "fr" ? "## Votre tâche maintenant" : "## Your task now";
+  const taskIntro =
+    lang === "fr"
+      ? "Revoyez le(s) livrable(s) ci-dessus et rédigez le **rapport QA complet** (pas un plan, pas un résumé de ces instructions)."
+      : "Review the deliverable(s) above and write the **completed QA report** (not a plan, not a summary of these instructions).";
+  const mustBegin =
+    lang === "fr"
+      ? "Votre réponse **doit commencer** par :\n\n## En-tête"
+      : "Your response **must begin** with:\n\n## Header";
+  const thenContinue =
+    lang === "fr"
+      ? "Puis continuez avec ## Évaluation globale et toutes les sections restantes dans l'ordre."
+      : "Then continue with ## Overall Assessment and all remaining sections in order.";
 
   return `${reviewRubric}
 ${customBlock}
+${languageBlock}
 
 ---
 
@@ -115,25 +146,23 @@ ${qcChecklistPrompt}
 
 ---
 
-## Deliverables to review
+${deliverablesHeading}
 
 ${docBlock}
 
 ---
 
-## Your task now
+${taskHeading}
 
-Review the deliverable(s) above and write the **completed QA report** (not a plan, not a summary of these instructions).
+${taskIntro}
 
-Your response **must begin** with:
+${mustBegin}
 
-## Header
-
-Then continue with ## Overall Assessment and all remaining sections in order.
+${thenContinue}
 
 Rules:
 - Score the deliverable using the rubric; cite specific content from the files.
-- In Header, list every filename from the Deliverables section above.
+- In ${lang === "fr" ? "En-tête" : "Header"}, list every filename from the Deliverables section above.
 - Do **not** repeat rubric category weights (e.g. "Logic 20%"), output-format section names, or these instructions.
 - Do **not** list what you will do — write the full report with scores, issues, and fixes.
 - Apply v2 severity rules: approximate/hedged figures → Minor; unsourced statistics → Critical.
@@ -141,7 +170,34 @@ Rules:
 `;
 }
 
-function buildChecklistFallbackPrompt(reportMarkdown) {
+function buildChecklistFallbackPrompt(reportMarkdown, lang = "en") {
+  if (lang === "fr") {
+    return `Vous êtes un assistant QA. Lisez le rapport de revue ci-dessous et produisez UNIQUEMENT un tableau JSON valide.
+Un objet par problème distinct sur lequel l'humain doit décider. Utilisez exactement ce schéma :
+
+[
+  {
+    "issueNumber": 1,
+    "category": "Chiffres",
+    "severity": "Gravité 1 – Critique",
+    "severityLevel": "1",
+    "location": "Paragraphe 1",
+    "problem": "Ce qui ne va pas",
+    "businessImpact": "Pourquoi c'est important",
+    "suggestedFix": "Quoi modifier"
+  }
+]
+
+Règles :
+- Produisez UNIQUEMENT le tableau JSON. Pas de markdown, pas de blocs de code, pas d'explication.
+- Incluez chaque problème mentionné dans Problèmes identifiés, Tableau récapitulatif ou Top 3 priorités.
+- Si le rapport n'identifie aucun problème, produisez [].
+
+Rapport :
+${reportMarkdown.slice(0, 12000)}
+`;
+  }
+
   return `You are a QA assistant. Read the review report below and output ONLY a valid JSON array.
 One object per distinct issue the human should decide on. Use this exact schema:
 
@@ -224,7 +280,7 @@ function isOutputTruncated(response, reportMarkdown) {
   if (finishReason === "MAX_TOKENS") return true;
   if (!reportMarkdown) return false;
   const hasEnd =
-    /##\s*Reviewer Metadata/i.test(reportMarkdown) ||
+    /##\s*(?:Reviewer Metadata|Métadonnées du réviseur|Metadonnees du reviseur)/i.test(reportMarkdown) ||
     /---QC_CHECKLIST_JSON---/.test(String(response.text || ""));
   return !hasEnd && reportMarkdown.length > 500;
 }
@@ -244,15 +300,20 @@ function looksLikePromptEcho(text) {
   return signals >= 2;
 }
 
-async function generateForModel(model, prompt, { systemInstruction, maxTokens } = {}) {
+async function generateForModel(model, prompt, { systemInstruction, maxTokens, lang = "en" } = {}) {
   const resolved = resolveMaxOutputTokens(maxTokens);
+  const defaultSystemEn = `You are a senior consulting partner performing QA on deliverables.
+Write a completed QA report about the uploaded deliverable content.
+Never repeat rubric weights, instruction lists, or output-format section names.
+Begin with ## Header, then ## Overall Assessment. Output raw Markdown, then ---QC_CHECKLIST_JSON--- and JSON.`;
+  const defaultSystemFr = `Vous êtes un associé conseil senior effectuant le QA des livrables.
+Rédigez un rapport QA complet sur le contenu téléversé, entièrement en français.
+Ne répétez jamais les poids de la grille, listes d'instructions ou noms de sections du format de sortie.
+Commencez par ## En-tête, puis ## Évaluation globale. Produisez du Markdown brut, puis ---QC_CHECKLIST_JSON--- et le JSON.`;
   const config = {
     systemInstruction:
       systemInstruction ??
-      `You are a senior consulting partner performing QA on deliverables.
-Write a completed QA report about the uploaded deliverable content.
-Never repeat rubric weights, instruction lists, or output-format section names.
-Begin with ## Header, then ## Overall Assessment. Output raw Markdown, then ---QC_CHECKLIST_JSON--- and JSON.`,
+      (lang === "fr" ? defaultSystemFr : defaultSystemEn),
     temperature: 0.3,
   };
   if (resolved != null) {
@@ -305,13 +366,19 @@ async function generateWithRetry(prompt, options = {}) {
   throw new Error(formatApiError(lastError, models));
 }
 
-async function generateChecklistFallback(reportMarkdown, model) {
+async function generateChecklistFallback(reportMarkdown, model, lang = "en") {
   try {
-    const { response } = await generateWithRetry(buildChecklistFallbackPrompt(reportMarkdown), {
-      systemInstruction:
-        "Output ONLY a valid JSON array of QC checklist items. No markdown or prose.",
-      maxTokens: 2048,
-    });
+    const { response } = await generateWithRetry(
+      buildChecklistFallbackPrompt(reportMarkdown, lang),
+      {
+        systemInstruction:
+          lang === "fr"
+            ? "Produisez UNIQUEMENT un tableau JSON valide d'éléments de liste QC. Pas de markdown ni de prose."
+            : "Output ONLY a valid JSON array of QC checklist items. No markdown or prose.",
+        maxTokens: 2048,
+        lang,
+      }
+    );
     const text = getResponseText(response).trim();
     const arrayMatch = text.match(/\[[\s\S]*\]/);
     if (!arrayMatch) return [];
@@ -322,7 +389,9 @@ async function generateChecklistFallback(reportMarkdown, model) {
   }
 }
 
-export async function runReview({ documents, customRubric }) {
+export async function runReview({ documents, customRubric, lang = "en" }) {
+  const resolvedLang = normalizeLang(lang);
+
   if (!process.env.GEMINI_API_KEY) {
     throw new Error(
       "GEMINI_API_KEY is not set. Add it to .env (see .env.example)."
@@ -330,19 +399,22 @@ export async function runReview({ documents, customRubric }) {
   }
 
   const [rubric, outputFormat, qcChecklistPrompt] = await Promise.all([
-    loadRubricPrompt(),
-    loadOutputFormatPrompt(),
-    loadQcChecklistPrompt(),
+    loadRubricPrompt(resolvedLang),
+    loadOutputFormatPrompt(resolvedLang),
+    loadQcChecklistPrompt(resolvedLang),
   ]);
   const prompt = buildReviewPrompt(
     rubric,
     outputFormat,
     qcChecklistPrompt,
     customRubric,
-    documents
+    documents,
+    resolvedLang
   );
 
-  const { response, modelUsed, fallback } = await generateWithRetry(prompt);
+  const { response, modelUsed, fallback } = await generateWithRetry(prompt, {
+    lang: resolvedLang,
+  });
 
   const rawText = getResponseText(response);
   if (!rawText) {
@@ -372,12 +444,14 @@ export async function runReview({ documents, customRubric }) {
   }
 
   if (checklistItems.length === 0) {
-    checklistItems = await generateChecklistFallback(reportText, modelUsed);
+    checklistItems = await generateChecklistFallback(reportText, modelUsed, resolvedLang);
   }
 
+  const fallbackNoteEn = `> *Note: Primary model (${PRIMARY_MODEL}) was unavailable; this review used **${modelUsed}**.*\n\n`;
+  const fallbackNoteFr = `> *Note : Le modèle principal (${PRIMARY_MODEL}) était indisponible ; cette revue a utilisé **${modelUsed}**.*\n\n`;
   const report =
     fallback && modelUsed !== PRIMARY_MODEL
-      ? `> *Note: Primary model (${PRIMARY_MODEL}) was unavailable; this review used **${modelUsed}**.*\n\n${reportText}`
+      ? `${resolvedLang === "fr" ? fallbackNoteFr : fallbackNoteEn}${reportText}`
       : reportText;
 
   return {
@@ -387,5 +461,6 @@ export async function runReview({ documents, customRubric }) {
     reviewedAt: new Date().toISOString(),
     fileNames: documents.map((d) => d.name),
     outputTruncated,
+    lang: resolvedLang,
   };
 }

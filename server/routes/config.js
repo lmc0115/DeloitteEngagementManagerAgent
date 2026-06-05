@@ -10,10 +10,11 @@ const CHECKLIST_PATH = path.join(ROOT, "config", "default-qc-checklist.json");
 
 const router = Router();
 
-router.get("/rubric", async (_req, res) => {
+router.get("/rubric", async (req, res) => {
   try {
-    const content = await loadRubricForDisplay();
-    res.json({ content });
+    const lang = req.query.lang === "fr" ? "fr" : "en";
+    const content = await loadRubricForDisplay(lang);
+    res.json({ content, lang });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

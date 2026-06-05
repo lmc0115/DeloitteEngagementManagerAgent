@@ -1,18 +1,34 @@
 import { prepareReportMarkdown } from "./prepareReportMarkdown.js";
 
-function fieldValue(block, name) {
-  const re = new RegExp(
-    `\\*\\*${name}:\\*\\*\\s*([\\s\\S]*?)(?=\\n-\\s*\\*\\*|\\n#{1,4}\\s|$)`,
-    "i"
-  );
-  return block.match(re)?.[1]?.trim().replace(/\s+/g, " ") || "";
+const FIELD_ALIASES = {
+  category: ["Category", "Catégorie", "Categorie"],
+  severity: ["Severity", "Gravité", "Gravite"],
+  location: ["Location", "Emplacement"],
+  problem: ["Problem", "Constat"],
+  businessImpact: ["Business impact", "Impact commercial"],
+  suggestedFix: ["Suggested fix", "Correction suggérée", "Correction suggeree"],
+};
+
+function fieldValue(block, fieldKey) {
+  for (const name of FIELD_ALIASES[fieldKey] || []) {
+    const re = new RegExp(
+      `\\*\\*${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:\\*\\*\\s*([\\s\\S]*?)(?=\\n-\\s*\\*\\*|\\n#{1,4}\\s|$)`,
+      "i"
+    );
+    const match = block.match(re)?.[1]?.trim().replace(/\s+/g, " ");
+    if (match) return match;
+  }
+  return "";
 }
 
 function severityLevel(severity) {
   const s = (severity || "").toLowerCase();
-  if (s.includes("critical") || /severity\s*1/.test(s)) return "1";
-  if (s.includes("major") || /severity\s*2/.test(s)) return "2";
-  if (s.includes("minor") || /severity\s*3/.test(s)) return "3";
+  if (s.includes("critical") || s.includes("critique") || /(?:severity|gravité|gravite)\s*1/.test(s))
+    return "1";
+  if (s.includes("major") || s.includes("majeur") || /(?:severity|gravité|gravite)\s*2/.test(s))
+    return "2";
+  if (s.includes("minor") || s.includes("mineur") || /(?:severity|gravité|gravite)\s*3/.test(s))
+    return "3";
   return "";
 }
 
@@ -42,7 +58,7 @@ function parseIssueBlocks(sectionText) {
   const issues = [];
   const blocks = [
     ...sectionText.matchAll(
-      /#{3,4}\s*Issue\s*(\d+)\s*\n([\s\S]*?)(?=#{3,4}\s*Issue\s*\d+|\n##\s|$)/gi
+      /#{3,4}\s*(?:Issue|Problème|Probleme)\s*(\d+)\s*\n([\s\S]*?)(?=#{3,4}\s*(?:Issue|Problème|Probleme)\s*\d+|\n##\s|$)/gi
     ),
   ];
 
@@ -51,12 +67,12 @@ function parseIssueBlocks(sectionText) {
     const body = match[2];
     issues.push(
       toChecklistItem(num, {
-        category: fieldValue(body, "Category"),
-        severity: fieldValue(body, "Severity"),
-        location: fieldValue(body, "Location"),
-        problem: fieldValue(body, "Problem"),
-        businessImpact: fieldValue(body, "Business impact"),
-        suggestedFix: fieldValue(body, "Suggested fix"),
+        category: fieldValue(body, "category"),
+        severity: fieldValue(body, "severity"),
+        location: fieldValue(body, "location"),
+        problem: fieldValue(body, "problem"),
+        businessImpact: fieldValue(body, "businessImpact"),
+        suggestedFix: fieldValue(body, "suggestedFix"),
       })
     );
   }
@@ -65,7 +81,9 @@ function parseIssueBlocks(sectionText) {
 }
 
 function parseFromSummaryTable(text) {
-  const section = text.match(/##\s*Summary Table\s*\n([\s\S]*?)(?=\n##\s|$)/i)?.[1];
+  const section = text.match(
+    /##\s*(?:Summary Table|Tableau récapitulatif|Tableau recapitulatif)\s*\n([\s\S]*?)(?=\n##\s|$)/i
+  )?.[1];
   if (!section) return [];
 
   const rows = [...section.matchAll(/^\|\s*(\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/gm)];
@@ -82,21 +100,26 @@ function parseFromSummaryTable(text) {
     );
 }
 
+function categoryFieldPattern() {
+  return FIELD_ALIASES.category.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+}
+
 function parseLooseBullets(sectionText) {
   const issues = [];
-  const chunks = sectionText.split(/\n(?=[-*]\s*\*\*Category:\*\*)/i);
+  const re = new RegExp(`\\n(?=[-*]\\s*\\*\\*(?:${categoryFieldPattern()}):\\*\\*)`, "i");
+  const chunks = sectionText.split(re);
 
   for (const chunk of chunks) {
-    if (!/\*\*Category:\*\*/i.test(chunk)) continue;
+    if (!new RegExp(`\\*\\*(?:${categoryFieldPattern()}):\\*\\*`, "i").test(chunk)) continue;
     const num = issues.length + 1;
     issues.push(
       toChecklistItem(num, {
-        category: fieldValue(chunk, "Category"),
-        severity: fieldValue(chunk, "Severity"),
-        location: fieldValue(chunk, "Location"),
-        problem: fieldValue(chunk, "Problem"),
-        businessImpact: fieldValue(chunk, "Business impact"),
-        suggestedFix: fieldValue(chunk, "Suggested fix"),
+        category: fieldValue(chunk, "category"),
+        severity: fieldValue(chunk, "severity"),
+        location: fieldValue(chunk, "location"),
+        problem: fieldValue(chunk, "problem"),
+        businessImpact: fieldValue(chunk, "businessImpact"),
+        suggestedFix: fieldValue(chunk, "suggestedFix"),
       })
     );
   }
@@ -110,12 +133,17 @@ function parseLooseBullets(sectionText) {
 export function parseIssuesFromReport(raw) {
   const text = prepareReportMarkdown(raw || "");
 
-  if (/no issues identified/i.test(text) && !/Issue\s*\d+/i.test(text)) {
+  if (
+    /no issues identified|aucun problème identifié|aucun probleme identifie/i.test(text) &&
+    !/(?:Issue|Problème|Probleme)\s*\d+/i.test(text)
+  ) {
     return [];
   }
 
   const sectionText =
-    text.match(/##\s*Issues Found\s*\n([\s\S]*?)(?=\n##\s|$)/i)?.[1] || text;
+    text.match(
+      /##\s*(?:Issues Found|Problèmes identifiés|Problemes identifies)\s*\n([\s\S]*?)(?=\n##\s|$)/i
+    )?.[1] || text;
 
   let issues = parseIssueBlocks(sectionText);
   if (issues.length === 0) issues = parseLooseBullets(sectionText);

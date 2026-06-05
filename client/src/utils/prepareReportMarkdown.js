@@ -1,1 +1,1 @@
-export { prepareReportMarkdown, parseReportSummary } from "../../../shared/prepareReportMarkdown.js";
+export { prepareReportMarkdown, parseReportSummary, verdictTone } from "../../../shared/prepareReportMarkdown.js";

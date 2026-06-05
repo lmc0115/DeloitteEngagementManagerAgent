@@ -1,9 +1,11 @@
 import { useRef, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const ACCEPT =
   ".txt,.md,.markdown,.pdf,.docx,.xlsx,.pptx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 export default function FileUpload({ files, onFilesChange }) {
+  const { t } = useLanguage();
   const inputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -30,13 +32,10 @@ export default function FileUpload({ files, onFilesChange }) {
   return (
     <section className="card">
       <div className="card-title-row">
-        <h2>Upload deliverables</h2>
-        <span className="card-badge">Step 1</span>
+        <h2>{t.upload.title}</h2>
+        <span className="card-badge">{t.upload.step}</span>
       </div>
-      <p className="card-sub">
-        Mini-decks or memos — .txt, .md, .pdf, .docx, .xlsx, or .pptx (max 15 MB
-        each, up to 10 files)
-      </p>
+      <p className="card-sub">{t.upload.sub}</p>
 
       <div
         className={`dropzone ${dragOver ? "drag-over" : ""}`}
@@ -51,13 +50,13 @@ export default function FileUpload({ files, onFilesChange }) {
           ↑
         </div>
         <p>
-          <strong>Drag and drop files</strong> or{" "}
+          <strong>{t.upload.dragDrop}</strong> {t.upload.or}{" "}
           <button
             type="button"
             className="btn btn-secondary"
             onClick={() => inputRef.current?.click()}
           >
-            Browse files
+            {t.upload.browse}
           </button>
         </p>
         <input
@@ -83,7 +82,7 @@ export default function FileUpload({ files, onFilesChange }) {
                 </small>
               </span>
               <button type="button" onClick={() => removeAt(i)}>
-                Remove
+                {t.upload.remove}
               </button>
             </li>
           ))}

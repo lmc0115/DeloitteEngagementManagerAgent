@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { normalizeMarkdown } from "../utils/normalizeMarkdown.js";
 import { prepareReportMarkdown } from "../utils/prepareReportMarkdown.js";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 function cellText(children) {
   if (typeof children === "string") return children;
@@ -15,28 +16,46 @@ function severityLevel(text) {
   if (/^\d+\s*%$/.test(t)) return null;
   if (/^\d+$/.test(t)) return null;
 
-  if (/^Severity\s*1\b/i.test(t) || /^1\s*[—–-]\s*Critical/i.test(t) || /^Critical$/i.test(t)) {
+  if (
+    /^Severity\s*1\b/i.test(t) ||
+    /^Gravité\s*1\b/i.test(t) ||
+    /^Gravite\s*1\b/i.test(t) ||
+    /^1\s*[—–-]\s*(?:Critical|Critique)/i.test(t) ||
+    /^(?:Critical|Critique)$/i.test(t)
+  ) {
     return "1";
   }
-  if (/^Severity\s*2\b/i.test(t) || /^2\s*[—–-]\s*Major/i.test(t) || /^Major$/i.test(t)) {
+  if (
+    /^Severity\s*2\b/i.test(t) ||
+    /^Gravité\s*2\b/i.test(t) ||
+    /^Gravite\s*2\b/i.test(t) ||
+    /^2\s*[—–-]\s*(?:Major|Majeur)/i.test(t) ||
+    /^(?:Major|Majeur)$/i.test(t)
+  ) {
     return "2";
   }
-  if (/^Severity\s*3\b/i.test(t) || /^3\s*[—–-]\s*Minor/i.test(t) || /^Minor$/i.test(t)) {
+  if (
+    /^Severity\s*3\b/i.test(t) ||
+    /^Gravité\s*3\b/i.test(t) ||
+    /^Gravite\s*3\b/i.test(t) ||
+    /^3\s*[—–-]\s*(?:Minor|Mineur)/i.test(t) ||
+    /^(?:Minor|Mineur)$/i.test(t)
+  ) {
     return "3";
   }
   return null;
 }
 
 function SeverityCell({ children }) {
+  const { t } = useLanguage();
   const text = cellText(children).trim();
   const level = severityLevel(text);
   if (!level) return <td>{children}</td>;
 
-  const labels = { 1: "Critical", 2: "Major", 3: "Minor" };
   return (
     <td>
       <span className={`severity-badge severity-${level}`}>
-        {level} — {labels[level]}
+        {level} — {t.checklist.severity[level]}
       </span>
     </td>
   );
@@ -46,8 +65,8 @@ function looksLikeMarkdownReport(text) {
   return (
     /^#{1,4}\s+/m.test(text) ||
     /^(\*\*[^*]+\*\*|\*[^*\n]+:\*)/m.test(text) ||
-    /^\|\s*Category\s*\|/m.test(text) ||
-    /^-\s+\*\*[A-Za-z]+:/m.test(text) ||
+    /^\|\s*(?:Category|Catégorie|Categorie)\s*\|/m.test(text) ||
+    /^-\s+\*\*[A-Za-zÀ-ÿ]+:/m.test(text) ||
     /^\d+\.\s+/m.test(text)
   );
 }

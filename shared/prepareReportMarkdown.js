@@ -116,23 +116,61 @@ export function prepareReportMarkdown(raw) {
   return text.trim();
 }
 
+function cleanSummaryValue(raw) {
+  if (!raw) return null;
+  const cleaned = String(raw)
+    .replace(/^[\s*•\-–—]+/, "")
+    .replace(/\*\*/g, "")
+    .trim();
+  return cleaned || null;
+}
+
+function extractLabeledValue(text, labels) {
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const boldMatch = text.match(
+      new RegExp(`\\*\\*${escaped}\\s*:\\*\\*\\s*([^\\n]+)`, "i")
+    );
+    if (boldMatch) return cleanSummaryValue(boldMatch[1]);
+
+    const plainMatch = text.match(
+      new RegExp(`(?:^|[\\n\\r])\\s*[-*•]?\\s*${escaped}\\s*:\\s*([^\\n]+)`, "im")
+    );
+    if (plainMatch) return cleanSummaryValue(plainMatch[1]);
+  }
+  return null;
+}
+
 /**
  * Extract overall score and verdict for the report summary bar.
  */
 export function parseReportSummary(markdown) {
   const text = prepareReportMarkdown(markdown || "");
+  const assessmentSection =
+    text.match(
+      /##\s*(?:Overall Assessment|Évaluation globale|Evaluation globale)\s*\n([\s\S]*?)(?=\n##\s|$)/i
+    )?.[1] || text;
+
   const score =
-    text.match(/\*\*Overall score:\*\*\s*([^\n]+)/i)?.[1]?.trim() ||
-    text.match(/Overall score:\s*(\d+\s*\/\s*100)/i)?.[1]?.trim() ||
-    null;
+    extractLabeledValue(assessmentSection, ["Overall score", "Score global"]) ||
+    extractLabeledValue(text, ["Overall score", "Score global"]);
   const verdict =
-    text.match(/\*\*Verdict:\*\*\s*([^\n]+)/i)?.[1]?.trim() ||
-    text.match(/Verdict:\s*([^\n]+)/i)?.[1]?.trim() ||
-    null;
+    extractLabeledValue(assessmentSection, ["Verdict"]) ||
+    extractLabeledValue(text, ["Verdict"]);
   const rationale =
-    text.match(/\*\*Rationale:\*\*\s*([^\n]+)/i)?.[1]?.trim() ||
-    text.match(/Rationale:\s*([^\n]+)/i)?.[1]?.trim() ||
-    null;
+    extractLabeledValue(assessmentSection, ["Rationale", "Justification"]) ||
+    extractLabeledValue(text, ["Rationale", "Justification"]);
 
   return { score, verdict, rationale };
+}
+
+export function verdictTone(verdict) {
+  if (!verdict) return "revision";
+  const v = verdict.toLowerCase();
+  if (v.includes("partner ready") || v.includes("prêt pour associé") || v.includes("pret pour associe"))
+    return "ready";
+  if (v.includes("not ready") || v.includes("non prêt") || v.includes("non pret"))
+    return "not-ready";
+  if (v.includes("minor") || v.includes("mineure")) return "minor";
+  return "revision";
 }

@@ -4,17 +4,11 @@ import RubricPanel from "./components/RubricPanel.jsx";
 import ChecklistPanel from "./components/ChecklistPanel.jsx";
 import ReportPanel from "./components/ReportPanel.jsx";
 import PdfExportPanel from "./components/PdfExportPanel.jsx";
-
-const WORKFLOW = [
-  "Create deliverable",
-  "LLM QA review",
-  "Category scorecard",
-  "Flag issues",
-  "Assign severity",
-  "Human decides",
-];
+import LanguageSelector from "./components/LanguageSelector.jsx";
+import { useLanguage } from "./i18n/LanguageContext.jsx";
 
 export default function App() {
+  const { lang, t } = useLanguage();
   const [files, setFiles] = useState([]);
   const [rubric, setRubric] = useState("");
   const [customRubric, setCustomRubric] = useState("");
@@ -25,9 +19,16 @@ export default function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    setReport(null);
+    setChecklistItems([]);
+    setReportMeta(null);
+    setError(null);
+  }, [lang]);
+
+  useEffect(() => {
     async function loadConfig() {
       try {
-        const rubricRes = await fetch("/api/rubric");
+        const rubricRes = await fetch(`/api/rubric?lang=${lang}`);
         if (rubricRes.ok) {
           const data = await rubricRes.json();
           setRubric(data.content);
@@ -37,11 +38,11 @@ export default function App() {
       }
     }
     loadConfig();
-  }, []);
+  }, [lang]);
 
   async function runReview() {
     if (files.length === 0) {
-      setError("Please upload at least one deliverable file.");
+      setError(t.errors.uploadRequired);
       return;
     }
 
@@ -53,6 +54,7 @@ export default function App() {
     const form = new FormData();
     files.forEach((f) => form.append("files", f));
     form.append("customRubric", customRubric);
+    form.append("lang", lang);
 
     try {
       const res = await fetch("/api/review", {
@@ -60,7 +62,7 @@ export default function App() {
         body: form,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Review failed");
+      if (!res.ok) throw new Error(data.error || t.errors.reviewFailed);
 
       setReport(data.report);
       setChecklistItems(data.checklistItems || []);
@@ -69,6 +71,7 @@ export default function App() {
         reviewedAt: data.reviewedAt,
         fileNames: data.fileNames,
         outputTruncated: data.outputTruncated,
+        lang: data.lang || lang,
       });
     } catch (e) {
       setError(e.message);
@@ -85,19 +88,18 @@ export default function App() {
   return (
     <>
       <header className="app-header">
+        <div className="app-header-bar">
+          <LanguageSelector />
+        </div>
         <div className="app-header-inner">
           <div className="brand-row">
             <div className="brand-mark" aria-hidden />
-            <span className="brand-label">Consulting · Quality Assurance</span>
+            <span className="brand-label">{t.brandLabel}</span>
           </div>
-          <h1>Deliverable QA Reviewer</h1>
-          <p className="lead">
-            LLM quality control for partner-ready mini-decks and memos — scores
-            eight categories, flags issues with severity, and suggests fixes.
-            You decide what to change before review.
-          </p>
+          <h1>{t.title}</h1>
+          <p className="lead">{t.lead}</p>
           <div className="workflow">
-            {WORKFLOW.map((step, i) => (
+            {t.workflow.map((step, i) => (
               <span
                 key={step}
                 className={`workflow-step ${i === 1 && loading ? "active" : ""}`}
@@ -121,8 +123,8 @@ export default function App() {
         <div className="section-cta">
           <p>
             {files.length > 0
-              ? `${files.length} file(s) ready for review`
-              : "Upload at least one deliverable to run QA review"}
+              ? t.cta.filesReady(files.length)
+              : t.cta.uploadFirst}
           </p>
           <button
             type="button"
@@ -130,7 +132,7 @@ export default function App() {
             disabled={loading || files.length === 0}
             onClick={runReview}
           >
-            {loading ? "Reviewing…" : "Run QA review"}
+            {loading ? t.cta.reviewing : t.cta.runReview}
           </button>
         </div>
 

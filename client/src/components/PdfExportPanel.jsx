@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generatePdf } from "../utils/pdfExport.js";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 export default function PdfExportPanel({
   rubric,
@@ -9,21 +10,22 @@ export default function PdfExportPanel({
   checklistItems,
   uploadedFileNames,
 }) {
+  const { lang, t } = useLanguage();
   const [includeRubric, setIncludeRubric] = useState(true);
   const [includeReport, setIncludeReport] = useState(true);
   const [includeChecklist, setIncludeChecklist] = useState(true);
 
   const fullRubric = customRubric.trim()
-    ? `${rubric}\n\n---\n\n## Additional requirements\n\n${customRubric.trim()}`
+    ? `${rubric}\n\n---\n\n## ${t.rubric.additionalSection}\n\n${customRubric.trim()}`
     : rubric;
 
   function handleDownload() {
     if (!includeRubric && !includeReport && !includeChecklist) {
-      alert("Select at least one section to include in the PDF.");
+      alert(t.pdf.alertNoSection);
       return;
     }
     if (includeReport && !report) {
-      alert("Run a review first to include the AI report in the PDF.");
+      alert(t.pdf.alertNoReport);
       return;
     }
 
@@ -36,19 +38,18 @@ export default function PdfExportPanel({
       checklistItems: includeChecklist ? checklistItems : [],
       uploadedFileNames,
       reportMeta,
+      labels: t.pdf,
+      locale: lang === "fr" ? "fr-CA" : undefined,
     });
   }
 
   return (
     <section className="card">
       <div className="card-title-row">
-        <h2>Export package</h2>
-        <span className="card-badge">PDF download</span>
+        <h2>{t.pdf.title}</h2>
+        <span className="card-badge">{t.pdf.badge}</span>
       </div>
-      <p className="card-sub">
-        Build a client-ready PDF with rubric, AI report, and/or checklist. File
-        names are listed on the cover page.
-      </p>
+      <p className="card-sub">{t.pdf.sub}</p>
 
       <div className="pdf-options">
         <label>
@@ -57,7 +58,7 @@ export default function PdfExportPanel({
             checked={includeRubric}
             onChange={(e) => setIncludeRubric(e.target.checked)}
           />
-          QA rubric (default + additional requirements)
+          {t.pdf.includeRubric}
         </label>
         <label>
           <input
@@ -65,7 +66,7 @@ export default function PdfExportPanel({
             checked={includeReport}
             onChange={(e) => setIncludeReport(e.target.checked)}
           />
-          AI review report
+          {t.pdf.includeReport}
         </label>
         <label>
           <input
@@ -73,12 +74,12 @@ export default function PdfExportPanel({
             checked={includeChecklist}
             onChange={(e) => setIncludeChecklist(e.target.checked)}
           />
-          Human QC checklist (issues + your decisions)
+          {t.pdf.includeChecklist}
         </label>
       </div>
 
       <button type="button" className="btn btn-primary" onClick={handleDownload}>
-        Download PDF
+        {t.pdf.download}
       </button>
     </section>
   );

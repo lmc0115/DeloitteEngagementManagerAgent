@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { parseMarkdownForPdf } from "./pdfMarkdownParser.js";
+import { parseReportSummary, verdictTone } from "./prepareReportMarkdown.js";
 
 const MARGIN = 18;
 const PAGE_WIDTH = 210;
@@ -19,6 +20,9 @@ const COLORS = {
   white: [255, 255, 255],
   critical: [196, 18, 48],
   major: [180, 83, 9],
+  verdictReady: [45, 106, 18],
+  verdictMinor: [180, 83, 9],
+  verdictRevision: [194, 65, 12],
 };
 
 function stripInlineMd(text) {
@@ -39,29 +43,25 @@ function ensureSpace(doc, y, needed = 20) {
   return y;
 }
 
-function drawPageFooter(doc, pageNum, totalPages) {
+function drawPageFooter(doc, pageNum, totalPages, labels) {
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.gray500);
   doc.setFont(undefined, "normal");
-  doc.text(
-    `Consulting Deliverable QA Package · Page ${pageNum} of ${totalPages}`,
-    MARGIN,
-    FOOTER_Y
-  );
+  doc.text(labels.footer(pageNum, totalPages), MARGIN, FOOTER_Y);
   doc.setDrawColor(...COLORS.green);
   doc.setLineWidth(0.8);
   doc.line(MARGIN, FOOTER_Y - 3, PAGE_WIDTH - MARGIN, FOOTER_Y - 3);
 }
 
-function applyFootersToAllPages(doc) {
+function applyFootersToAllPages(doc, labels) {
   const totalPages = doc.internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    drawPageFooter(doc, p, totalPages);
+    drawPageFooter(doc, p, totalPages, labels);
   }
 }
 
-function drawCoverHeader(doc, y) {
+function drawCoverHeader(doc, labels) {
   doc.setFillColor(...COLORS.black);
   doc.rect(0, 0, PAGE_WIDTH, 42, "F");
   doc.setFillColor(...COLORS.green);
@@ -70,21 +70,21 @@ function drawCoverHeader(doc, y) {
   doc.setTextColor(...COLORS.green);
   doc.setFontSize(8);
   doc.setFont(undefined, "bold");
-  doc.text("CONSULTING · QUALITY ASSURANCE", MARGIN, 14);
+  doc.text(labels.coverBrand, MARGIN, 14);
 
   doc.setTextColor(...COLORS.white);
   doc.setFontSize(18);
-  doc.text("Deliverable QA Package", MARGIN, 26);
+  doc.text(labels.coverTitle, MARGIN, 26);
 
   doc.setFontSize(9);
   doc.setFont(undefined, "normal");
   doc.setTextColor(200, 200, 200);
-  doc.text("Partner-ready review · Rubric · Report · Checklist", MARGIN, 34);
+  doc.text(labels.coverSub, MARGIN, 34);
 
   return 52;
 }
 
-function addMetaBlock(doc, y, { uploadedFileNames, reportMeta }) {
+function addMetaBlock(doc, y, { uploadedFileNames, reportMeta, labels, locale }) {
   doc.setFillColor(...COLORS.gray100);
   doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 22, 2, 2, "F");
   doc.setDrawColor(...COLORS.gray300);
@@ -95,13 +95,14 @@ function addMetaBlock(doc, y, { uploadedFileNames, reportMeta }) {
   doc.setFontSize(9);
   doc.setFont(undefined, "normal");
 
+  const dateStr = new Date().toLocaleString(locale);
   let innerY = y + 7;
-  doc.text(`Generated: ${new Date().toLocaleString()}`, MARGIN + 4, innerY);
+  doc.text(`${labels.generated} ${dateStr}`, MARGIN + 4, innerY);
 
   if (uploadedFileNames?.length) {
     innerY += 5;
     const files = doc.splitTextToSize(
-      `Files reviewed: ${uploadedFileNames.join(", ")}`,
+      `${labels.filesReviewed} ${uploadedFileNames.join(", ")}`,
       CONTENT_WIDTH - 8
     );
     doc.text(files, MARGIN + 4, innerY);
@@ -110,13 +111,151 @@ function addMetaBlock(doc, y, { uploadedFileNames, reportMeta }) {
   if (reportMeta?.model) {
     innerY += 5;
     doc.text(
-      `Model: ${reportMeta.model}  |  Reviewed: ${reportMeta.reviewedAt ? new Date(reportMeta.reviewedAt).toLocaleString() : "—"}`,
+      `${labels.model}: ${reportMeta.model}  |  ${labels.reviewed}: ${reportMeta.reviewedAt ? new Date(reportMeta.reviewedAt).toLocaleString(locale) : "—"}`,
       MARGIN + 4,
       innerY
     );
   }
 
   return y + 28;
+}
+
+function verdictTextColor(tone) {
+  switch (tone) {
+    case "ready":
+      return COLORS.verdictReady;
+    case "minor":
+      return COLORS.verdictMinor;
+    case "not-ready":
+      return COLORS.critical;
+    default:
+      return COLORS.verdictRevision;
+  }
+}
+
+function renderReportMetaGrid(doc, y, { reportMeta, labels, locale }) {
+  const boxH = 14;
+  const gap = 3;
+  const colW = (CONTENT_WIDTH - gap) / 2;
+  y = ensureSpace(doc, y, boxH * 3 + gap * 2 + 4);
+
+  function drawMetaBox(x, boxY, w, h, label, value) {
+    doc.setFillColor(...COLORS.gray100);
+    doc.setDrawColor(...COLORS.gray300);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(x, boxY, w, h, 1.5, 1.5, "FD");
+
+    doc.setFontSize(6.5);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(...COLORS.gray500);
+    doc.text(String(label).toUpperCase(), x + 2.5, boxY + 4.5);
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, "normal");
+    doc.setTextColor(...COLORS.charcoal);
+    const lines = doc.splitTextToSize(String(value), w - 5);
+    doc.text(lines.slice(0, 2), x + 2.5, boxY + 9);
+  }
+
+  drawMetaBox(MARGIN, y, colW, boxH, labels.model, reportMeta?.model || "—");
+  drawMetaBox(
+    MARGIN + colW + gap,
+    y,
+    colW,
+    boxH,
+    labels.reviewed,
+    reportMeta?.reviewedAt ? new Date(reportMeta.reviewedAt).toLocaleString(locale) : "—"
+  );
+
+  const row2Y = y + boxH + gap;
+  drawMetaBox(
+    MARGIN,
+    row2Y,
+    CONTENT_WIDTH,
+    boxH,
+    labels.files,
+    reportMeta?.fileNames?.join(", ") || "—"
+  );
+
+  const row3Y = row2Y + boxH + gap;
+  drawMetaBox(MARGIN, row3Y, colW, boxH, labels.rubric, "v1.0");
+
+  return row3Y + boxH + 5;
+}
+
+function measureSummaryBarHeight(doc, summary, labels) {
+  let height = 16;
+  if (summary.rationale) {
+    doc.setFontSize(8.5);
+    const lines = doc.splitTextToSize(stripInlineMd(summary.rationale), CONTENT_WIDTH - 12);
+    height += 4 + lines.length * 4.2;
+  }
+  return height;
+}
+
+function renderReportSummaryBar(doc, y, summary, labels) {
+  if (!summary.score && !summary.verdict) return y;
+
+  const barH = measureSummaryBarHeight(doc, summary, labels);
+  y = ensureSpace(doc, y, barH + 4);
+
+  doc.setFillColor(...COLORS.greenSoft);
+  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, barH, 2, 2, "F");
+  doc.setFillColor(...COLORS.green);
+  doc.rect(MARGIN, y, 2.5, barH, "F");
+  doc.setDrawColor(...COLORS.gray300);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, barH, 2, 2, "S");
+
+  let innerY = y + 6;
+  const tone = verdictTone(summary.verdict);
+  const colW = CONTENT_WIDTH / 2 - 8;
+
+  if (summary.score) {
+    doc.setFontSize(6.5);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(...COLORS.gray500);
+    doc.text(labels.overallScore.toUpperCase(), MARGIN + 6, innerY);
+
+    doc.setFontSize(11);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(...COLORS.charcoal);
+    doc.text(stripInlineMd(summary.score), MARGIN + 6, innerY + 5.5);
+  }
+
+  if (summary.verdict) {
+    doc.setFontSize(6.5);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(...COLORS.gray500);
+    doc.text(labels.verdictLabel.toUpperCase(), MARGIN + 6 + colW, innerY);
+
+    doc.setFontSize(11);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(...verdictTextColor(tone));
+    const verdictLines = doc.splitTextToSize(stripInlineMd(summary.verdict), colW);
+    doc.text(verdictLines.slice(0, 2), MARGIN + 6 + colW, innerY + 5.5);
+  }
+
+  if (summary.rationale) {
+    innerY += 13;
+    doc.setDrawColor(...COLORS.gray300);
+    doc.line(MARGIN + 6, innerY, MARGIN + CONTENT_WIDTH - 6, innerY);
+    innerY += 4;
+    doc.setFontSize(8.5);
+    doc.setFont(undefined, "normal");
+    doc.setTextColor(...COLORS.gray500);
+    innerY = addWrappedText(
+      doc,
+      summary.rationale,
+      MARGIN + 6,
+      innerY,
+      CONTENT_WIDTH - 12,
+      4.2,
+      { noPageBreak: true }
+    );
+  }
+
+  return y + barH + 6;
 }
 
 function addSectionBanner(doc, y, title, subtitle) {
@@ -157,9 +296,9 @@ function addWrappedText(doc, text, x, y, maxWidth, lineHeight = 5, { noPageBreak
 
 function severityStyle(cellText) {
   const t = cellText.trim();
-  if (/^1\b|critical/i.test(t)) return { fillColor: COLORS.critical, textColor: COLORS.white };
-  if (/^2\b|major/i.test(t)) return { fillColor: COLORS.major, textColor: COLORS.white };
-  if (/^3\b|minor/i.test(t)) return { fillColor: COLORS.gray500, textColor: COLORS.white };
+  if (/^1\b|critical|critique/i.test(t)) return { fillColor: COLORS.critical, textColor: COLORS.white };
+  if (/^2\b|major|majeur/i.test(t)) return { fillColor: COLORS.major, textColor: COLORS.white };
+  if (/^3\b|minor|mineur/i.test(t)) return { fillColor: COLORS.gray500, textColor: COLORS.white };
   return null;
 }
 
@@ -172,7 +311,7 @@ function renderTable(doc, y, { headers, rows }, highlightSeverity = false) {
   );
 
   const severityCol = headers.findIndex((h) =>
-    /severity/i.test(h)
+    /severity|gravité|gravite/i.test(h)
   );
 
   autoTable(doc, {
@@ -201,7 +340,7 @@ function renderTable(doc, y, { headers, rows }, highlightSeverity = false) {
       fillColor: COLORS.gray100,
     },
     columnStyles: headers.reduce((acc, h, i) => {
-      if (/definition|fix|problem|location/i.test(h)) {
+      if (/definition|fix|problem|location|constat|emplacement|correction/i.test(h)) {
         acc[i] = { cellWidth: "wrap" };
       }
       return acc;
@@ -371,8 +510,8 @@ function renderMarkdownBlocks(doc, y, markdown, options = {}) {
   return y;
 }
 
-function renderChecklist(doc, y, items) {
-  y = addSectionBanner(doc, y, "Human QC Checklist", "Issues from AI report — human decisions");
+function renderChecklist(doc, y, items, labels) {
+  y = addSectionBanner(doc, y, labels.sectionChecklist, labels.sectionChecklistSub);
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -382,7 +521,7 @@ function renderChecklist(doc, y, items) {
     const severity = item.severity ? ` · ${item.severity}` : "";
     const problem = item.problem || stripInlineMd(item.text);
     const fix = item.suggestedFix?.trim();
-    const opinion = item.opinion?.trim() || "(not provided)";
+    const opinion = item.opinion?.trim() || labels.notProvided;
 
     y = ensureSpace(doc, y, 36);
 
@@ -411,13 +550,13 @@ function renderChecklist(doc, y, items) {
 
     if (fix) {
       doc.setTextColor(...COLORS.gray500);
-      const fixLines = doc.splitTextToSize(`Suggested fix: ${fix}`, CONTENT_WIDTH - 14);
+      const fixLines = doc.splitTextToSize(`${labels.suggestedFix} ${fix}`, CONTENT_WIDTH - 14);
       doc.text(fixLines.slice(0, 1), MARGIN + 12, y + 19);
     }
 
     doc.setTextColor(...COLORS.charcoal);
     doc.setFont(undefined, "bold");
-    doc.text("Human decision:", MARGIN + 12, y + 25);
+    doc.text(labels.humanDecision, MARGIN + 12, y + 25);
     doc.setFont(undefined, "normal");
     doc.setTextColor(...COLORS.gray500);
     const opLines = doc.splitTextToSize(opinion, CONTENT_WIDTH - 38);
@@ -429,6 +568,31 @@ function renderChecklist(doc, y, items) {
   return y;
 }
 
+const DEFAULT_PDF_LABELS = {
+  coverBrand: "CONSULTING · QUALITY ASSURANCE",
+  coverTitle: "Deliverable QA Package",
+  coverSub: "Partner-ready review · Rubric · Report · Checklist",
+  generated: "Generated:",
+  filesReviewed: "Files reviewed:",
+  model: "Model",
+  reviewed: "Reviewed",
+  files: "Files",
+  rubric: "Rubric",
+  overallScore: "Overall score",
+  verdictLabel: "Verdict",
+  sectionRubric: "QA Rubric",
+  sectionRubricSub: "Categories, severity levels, and review rules applied to this engagement",
+  sectionReport: "AI QA Review Report",
+  sectionReportSub: "Issues flagged with severity and suggested fixes",
+  sectionChecklist: "Human QC Checklist",
+  sectionChecklistSub: "Issues from AI report — human decisions",
+  humanDecision: "Human decision:",
+  suggestedFix: "Suggested fix:",
+  notProvided: "(not provided)",
+  footer: (page, total) => `Consulting Deliverable QA Package · Page ${page} of ${total}`,
+  filenameParts: { rubric: "rubric", report: "report", checklist: "checklist", export: "export" },
+};
+
 export function generatePdf({
   includeRubric,
   includeReport,
@@ -438,30 +602,27 @@ export function generatePdf({
   checklistItems,
   uploadedFileNames,
   reportMeta,
+  labels = DEFAULT_PDF_LABELS,
+  locale,
 }) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  let y = drawCoverHeader(doc, MARGIN);
-  y = addMetaBlock(doc, y, { uploadedFileNames, reportMeta });
+  let y = drawCoverHeader(doc, labels);
+  y = addMetaBlock(doc, y, { uploadedFileNames, reportMeta, labels, locale });
   y += 4;
 
   if (includeRubric && rubricText) {
-    y = addSectionBanner(
-      doc,
-      y,
-      "QA Rubric",
-      "Categories, severity levels, and review rules applied to this engagement"
-    );
+    y = addSectionBanner(doc, y, labels.sectionRubric, labels.sectionRubricSub);
     y = renderMarkdownBlocks(doc, y, rubricText);
     y += 4;
   }
 
   if (includeReport && reportText) {
-    y = addSectionBanner(
-      doc,
-      y,
-      "AI QA Review Report",
-      "Issues flagged with severity and suggested fixes"
-    );
+    y = addSectionBanner(doc, y, labels.sectionReport, labels.sectionReportSub);
+    if (reportMeta) {
+      y = renderReportMetaGrid(doc, y, { reportMeta, labels, locale });
+    }
+    const summary = parseReportSummary(reportText);
+    y = renderReportSummaryBar(doc, y, summary, labels);
     y = renderMarkdownBlocks(doc, y, reportText, {
       highlightSeverity: true,
       forReport: true,
@@ -470,16 +631,17 @@ export function generatePdf({
   }
 
   if (includeChecklist && checklistItems?.length) {
-    y = renderChecklist(doc, y, checklistItems);
+    y = renderChecklist(doc, y, checklistItems, labels);
   }
 
-  applyFootersToAllPages(doc);
+  applyFootersToAllPages(doc, labels);
 
-  const parts = [];
-  if (includeRubric) parts.push("rubric");
-  if (includeReport) parts.push("report");
-  if (includeChecklist) parts.push("checklist");
-  const filename = `qa-package-${parts.join("-") || "export"}-${Date.now()}.pdf`;
+  const parts = labels.filenameParts;
+  const filenameParts = [];
+  if (includeRubric) filenameParts.push(parts.rubric);
+  if (includeReport) filenameParts.push(parts.report);
+  if (includeChecklist) filenameParts.push(parts.checklist);
+  const filename = `qa-package-${filenameParts.join("-") || parts.export}-${Date.now()}.pdf`;
 
   doc.save(filename);
 }

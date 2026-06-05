@@ -1,15 +1,18 @@
-const SEVERITY_LABELS = { 1: "Critical", 2: "Major", 3: "Minor" };
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 function SeverityBadge({ level }) {
+  const { t } = useLanguage();
   if (!level) return null;
   return (
     <span className={`severity-badge severity-${level}`}>
-      {level} — {SEVERITY_LABELS[level]}
+      {level} — {t.checklist.severity[level]}
     </span>
   );
 }
 
 export default function ChecklistPanel({ items, onItemsChange, hasReport }) {
+  const { t } = useLanguage();
+
   function updateItem(id, patch) {
     onItemsChange(
       items.map((item) => (item.id === id ? { ...item, ...patch } : item))
@@ -19,26 +22,17 @@ export default function ChecklistPanel({ items, onItemsChange, hasReport }) {
   return (
     <section className="card">
       <div className="card-title-row">
-        <h2>Human QC checklist</h2>
-        <span className="card-badge">Issues from report</span>
+        <h2>{t.checklist.title}</h2>
+        <span className="card-badge">{t.checklist.badge}</span>
       </div>
-      <p className="card-sub">
-        Populated by the AI agent as structured QC checklist items (one per issue).
-        Record whether you will modify as suggested, handle differently, or accept
-        as-is.
-      </p>
+      <p className="card-sub">{t.checklist.sub}</p>
 
       {!hasReport && (
-        <p className="checklist-empty muted">
-          Run QA review first — checklist items will appear here automatically.
-        </p>
+        <p className="checklist-empty muted">{t.checklist.emptyBefore}</p>
       )}
 
       {hasReport && items.length === 0 && (
-        <p className="checklist-empty muted">
-          No issues were identified in the review report, or the checklist could not be
-          extracted. Re-run the review if you expected flagged issues.
-        </p>
+        <p className="checklist-empty muted">{t.checklist.emptyAfter}</p>
       )}
 
       {items.map((item, index) => (
@@ -61,22 +55,22 @@ export default function ChecklistPanel({ items, onItemsChange, hasReport }) {
               <p className="checklist-issue-problem">{item.problem}</p>
               {item.businessImpact ? (
                 <p className="checklist-issue-impact">
-                  <strong>Business impact:</strong> {item.businessImpact}
+                  <strong>{t.checklist.businessImpact}</strong> {item.businessImpact}
                 </p>
               ) : null}
               {item.suggestedFix ? (
                 <p className="checklist-issue-fix">
-                  <strong>Suggested fix:</strong> {item.suggestedFix}
+                  <strong>{t.checklist.suggestedFix}</strong> {item.suggestedFix}
                 </p>
               ) : null}
             </div>
           </div>
           <label className="checklist-opinion-label" htmlFor={`opinion-${item.id}`}>
-            Human decision
+            {t.checklist.humanDecision}
           </label>
           <textarea
             id={`opinion-${item.id}`}
-            placeholder="e.g., Modify as suggested · Modify differently because… · Accept as-is · Defer to partner"
+            placeholder={t.checklist.placeholder}
             value={item.opinion}
             onChange={(e) => updateItem(item.id, { opinion: e.target.value })}
           />

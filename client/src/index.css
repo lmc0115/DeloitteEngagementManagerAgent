@@ -71,6 +71,47 @@ input {
   color: var(--d-white);
   padding: 0;
   border-bottom: 4px solid var(--d-green);
+  position: relative;
+}
+
+.app-header-bar {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lang-selector {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.lang-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  transition: background 0.15s, color 0.15s;
+}
+
+.lang-btn:hover {
+  color: var(--d-white);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lang-btn.active {
+  background: var(--d-green);
+  color: var(--d-black);
+}
+
+.lang-btn + .lang-btn {
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .app-header-inner {
