@@ -6,11 +6,17 @@ import ReportPanel from "./components/ReportPanel.jsx";
 import PdfExportPanel from "./components/PdfExportPanel.jsx";
 import LanguageSelector from "./components/LanguageSelector.jsx";
 import { useLanguage } from "./i18n/LanguageContext.jsx";
+import {
+  DEFAULT_RUBRIC_TYPE,
+  detectRubricType,
+} from "./utils/rubricTypes.js";
 
 export default function App() {
   const { lang, t } = useLanguage();
   const [files, setFiles] = useState([]);
   const [rubric, setRubric] = useState("");
+  const [rubricType, setRubricType] = useState(DEFAULT_RUBRIC_TYPE);
+  const [rubricTypeManual, setRubricTypeManual] = useState(false);
   const [customRubric, setCustomRubric] = useState("");
   const [checklistItems, setChecklistItems] = useState([]);
   const [report, setReport] = useState(null);
@@ -28,7 +34,9 @@ export default function App() {
   useEffect(() => {
     async function loadConfig() {
       try {
-        const rubricRes = await fetch(`/api/rubric?lang=${lang}`);
+        const rubricRes = await fetch(
+          `/api/rubric?lang=${lang}&rubricType=${rubricType}`
+        );
         if (rubricRes.ok) {
           const data = await rubricRes.json();
           setRubric(data.content);
@@ -38,7 +46,21 @@ export default function App() {
       }
     }
     loadConfig();
-  }, [lang]);
+  }, [lang, rubricType]);
+
+  // Re-detect the rubric set every time the uploaded files change, so the
+  // panel switches to the matching version automatically. A manual dropdown
+  // choice persists only until the next upload/removal.
+  function handleFilesChange(next) {
+    setFiles(next);
+    setRubricType(detectRubricType(next.map((f) => f.name)));
+    setRubricTypeManual(false);
+  }
+
+  function handleRubricTypeChange(nextType) {
+    setRubricTypeManual(true);
+    setRubricType(nextType);
+  }
 
   async function runReview() {
     if (files.length === 0) {
@@ -55,6 +77,7 @@ export default function App() {
     files.forEach((f) => form.append("files", f));
     form.append("customRubric", customRubric);
     form.append("lang", lang);
+    form.append("rubricType", rubricType);
 
     try {
       const res = await fetch("/api/review", {
@@ -112,12 +135,15 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <FileUpload files={files} onFilesChange={setFiles} />
+        <FileUpload files={files} onFilesChange={handleFilesChange} />
 
         <RubricPanel
           rubric={rubric}
           customRubric={customRubric}
           onCustomRubricChange={setCustomRubric}
+          rubricType={rubricType}
+          onRubricTypeChange={handleRubricTypeChange}
+          rubricTypeAuto={!rubricTypeManual && files.length > 0}
         />
 
         <div className="section-cta">

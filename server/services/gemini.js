@@ -2,6 +2,7 @@ import "../loadEnv.js";
 import { prepareReportMarkdown } from "../../shared/prepareReportMarkdown.js";
 import { splitReviewResponse, normalizeChecklistItems } from "../../shared/splitReviewResponse.js";
 import { parseIssuesFromReport } from "../../shared/parseIssuesFromReport.js";
+import { normalizeRubricType, DEFAULT_RUBRIC_TYPE } from "../../shared/rubricTypes.js";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -11,15 +12,48 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
 const PROMPTS_DIR = path.join(ROOT, "prompts");
 
-function resolvePromptPath(baseName, lang) {
-  if (lang === "fr") {
-    return path.join(PROMPTS_DIR, `${baseName}.fr.md`);
-  }
-  return path.join(PROMPTS_DIR, `${baseName}.md`);
-}
-
 function normalizeLang(lang) {
   return lang === "fr" ? "fr" : "en";
+}
+
+/**
+ * Candidate prompt filenames for a base name, language, and rubric type,
+ * in priority order. Falls back from type+lang → type+en → document+lang →
+ * document+en, so French and type-specific prompts degrade gracefully when a
+ * variant file does not exist yet.
+ */
+function promptCandidates(baseName, lang, rubricType) {
+  const type = normalizeRubricType(rubricType);
+  const typePart = type !== DEFAULT_RUBRIC_TYPE ? `.${type}` : "";
+  const langPart = lang === "fr" ? ".fr" : "";
+
+  const names = [];
+  const push = (n) => {
+    if (!names.includes(n)) names.push(n);
+  };
+
+  push(`${baseName}${typePart}${langPart}.md`);
+  push(`${baseName}${typePart}.md`);
+  if (typePart) {
+    push(`${baseName}${langPart}.md`);
+    push(`${baseName}.md`);
+  }
+
+  return names.map((n) => path.join(PROMPTS_DIR, n));
+}
+
+async function readPrompt(baseName, lang, rubricType) {
+  const candidates = promptCandidates(baseName, lang, rubricType);
+  let lastErr;
+  for (const candidate of candidates) {
+    try {
+      return await fs.readFile(candidate, "utf-8");
+    } catch (err) {
+      if (err?.code !== "ENOENT") throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error(`Prompt not found: ${baseName}`);
 }
 
 let ai;
@@ -52,22 +86,23 @@ function getModelsToTry() {
   return [...new Set([PRIMARY_MODEL, ...FALLBACK_MODELS])];
 }
 
-export async function loadRubricPrompt(lang = "en") {
-  return fs.readFile(resolvePromptPath("qa-rubric", normalizeLang(lang)), "utf-8");
+export async function loadRubricPrompt(lang = "en", rubricType = DEFAULT_RUBRIC_TYPE) {
+  return readPrompt("qa-rubric", normalizeLang(lang), rubricType);
 }
 
-export async function loadOutputFormatPrompt(lang = "en") {
-  return fs.readFile(resolvePromptPath("output-format", normalizeLang(lang)), "utf-8");
+export async function loadOutputFormatPrompt(lang = "en", rubricType = DEFAULT_RUBRIC_TYPE) {
+  return readPrompt("output-format", normalizeLang(lang), rubricType);
 }
 
+// QC checklist generation is identical across rubric types — language only.
 export async function loadQcChecklistPrompt(lang = "en") {
-  return fs.readFile(resolvePromptPath("qc-checklist-prompt", normalizeLang(lang)), "utf-8");
+  return readPrompt("qc-checklist-prompt", normalizeLang(lang), DEFAULT_RUBRIC_TYPE);
 }
 
-export async function loadRubricForDisplay(lang = "en") {
+export async function loadRubricForDisplay(lang = "en", rubricType = DEFAULT_RUBRIC_TYPE) {
   const [rubric, outputFormat] = await Promise.all([
-    loadRubricPrompt(lang),
-    loadOutputFormatPrompt(lang),
+    loadRubricPrompt(lang, rubricType),
+    loadOutputFormatPrompt(lang, rubricType),
   ]);
   return `${rubric.trim()}\n\n---\n\n${outputFormat.trim()}\n`;
 }
@@ -163,7 +198,7 @@ ${thenContinue}
 Rules:
 - Score the deliverable using the rubric; cite specific content from the files.
 - In ${lang === "fr" ? "En-tête" : "Header"}, list every filename from the Deliverables section above.
-- Do **not** repeat rubric category weights (e.g. "Logic 20%"), output-format section names, or these instructions.
+- Do **not** repeat rubric category weights (e.g. a category followed by its percentage), output-format section names, or these instructions.
 - Do **not** list what you will do — write the full report with scores, issues, and fixes.
 - Apply v2 severity rules: approximate/hedged figures → Minor; unsourced statistics → Critical.
 - Follow the output format, then append \`---QC_CHECKLIST_JSON---\` and the JSON array.
@@ -389,8 +424,14 @@ async function generateChecklistFallback(reportMarkdown, model, lang = "en") {
   }
 }
 
-export async function runReview({ documents, customRubric, lang = "en" }) {
+export async function runReview({
+  documents,
+  customRubric,
+  lang = "en",
+  rubricType = DEFAULT_RUBRIC_TYPE,
+}) {
   const resolvedLang = normalizeLang(lang);
+  const resolvedType = normalizeRubricType(rubricType);
 
   if (!process.env.GEMINI_API_KEY) {
     throw new Error(
@@ -399,8 +440,8 @@ export async function runReview({ documents, customRubric, lang = "en" }) {
   }
 
   const [rubric, outputFormat, qcChecklistPrompt] = await Promise.all([
-    loadRubricPrompt(resolvedLang),
-    loadOutputFormatPrompt(resolvedLang),
+    loadRubricPrompt(resolvedLang, resolvedType),
+    loadOutputFormatPrompt(resolvedLang, resolvedType),
     loadQcChecklistPrompt(resolvedLang),
   ]);
   const prompt = buildReviewPrompt(
@@ -462,5 +503,6 @@ export async function runReview({ documents, customRubric, lang = "en" }) {
     fileNames: documents.map((d) => d.name),
     outputTruncated,
     lang: resolvedLang,
+    rubricType: resolvedType,
   };
 }

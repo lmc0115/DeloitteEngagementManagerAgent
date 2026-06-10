@@ -26,7 +26,7 @@ export default {
     title: "QA rubric",
     badge: "Weighted · v1.0",
     expand: "Expand rubric (full screen)",
-    sub: "Eight categories scored 0–100 with partner-readiness thresholds. Criteria from prompts/qa-rubric.md; AI output format from prompts/output-format.md (shown at the end — scroll down).",
+    sub: "Categories scored 0–100 with partner-readiness thresholds, matched to the uploaded file type. AI output format is shown at the end — scroll down.",
     loading: "Loading rubric…",
     additionalRequirements: "Additional requirements",
     optional: "optional",
@@ -37,6 +37,15 @@ export default {
     modalSub: "Full criteria and AI reviewer output specification (v1.0)",
     close: "Close",
     additionalSection: "Additional requirements",
+    typeLabel: "Rubric set",
+    typeHint:
+      "Selected automatically from your uploaded files. Change it to score against a different rubric.",
+    typeAuto: "auto-selected from files",
+    types: {
+      document: "Document (PDF / Word / text)",
+      excel: "Workbook (Excel / XLSX / CSV)",
+      pptx: "Presentation (PPTX)",
+    },
   },
 
   cta: {

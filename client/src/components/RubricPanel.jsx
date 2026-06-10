@@ -1,11 +1,20 @@
 import { useEffect, useId, useState } from "react";
 import MarkdownContent from "./MarkdownContent.jsx";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
+import { RUBRIC_TYPES } from "../utils/rubricTypes.js";
 
-export default function RubricPanel({ rubric, customRubric, onCustomRubricChange }) {
+export default function RubricPanel({
+  rubric,
+  customRubric,
+  onCustomRubricChange,
+  rubricType,
+  onRubricTypeChange,
+  rubricTypeAuto = false,
+}) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const titleId = useId();
+  const selectId = useId();
 
   useEffect(() => {
     if (!expanded) return undefined;
@@ -42,6 +51,28 @@ export default function RubricPanel({ rubric, customRubric, onCustomRubricChange
           </div>
         </div>
         <p className="card-sub">{t.rubric.sub}</p>
+
+        <div className="field-group rubric-type-field">
+          <label className="field-label" htmlFor={selectId}>
+            {t.rubric.typeLabel}
+            {rubricTypeAuto && (
+              <span className="field-optional">{t.rubric.typeAuto}</span>
+            )}
+          </label>
+          <p className="field-hint">{t.rubric.typeHint}</p>
+          <select
+            id={selectId}
+            className="field-select"
+            value={rubricType}
+            onChange={(e) => onRubricTypeChange?.(e.target.value)}
+          >
+            {RUBRIC_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t.rubric.types[type]}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="rubric-preview prose-panel">
           {rubric ? (

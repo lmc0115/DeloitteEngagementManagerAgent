@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { loadRubricForDisplay } from "../services/gemini.js";
+import { normalizeRubricType } from "../../shared/rubricTypes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -13,8 +14,9 @@ const router = Router();
 router.get("/rubric", async (req, res) => {
   try {
     const lang = req.query.lang === "fr" ? "fr" : "en";
-    const content = await loadRubricForDisplay(lang);
-    res.json({ content, lang });
+    const rubricType = normalizeRubricType(req.query.rubricType);
+    const content = await loadRubricForDisplay(lang, rubricType);
+    res.json({ content, lang, rubricType });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

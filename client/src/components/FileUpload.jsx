@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const ACCEPT =
-  ".txt,.md,.markdown,.pdf,.docx,.xlsx,.pptx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  ".txt,.md,.markdown,.csv,.pdf,.docx,.xlsx,.pptx,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 export default function FileUpload({ files, onFilesChange }) {
   const { t } = useLanguage();

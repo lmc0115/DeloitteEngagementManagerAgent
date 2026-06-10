@@ -26,7 +26,7 @@ export default {
     title: "Grille QA",
     badge: "Pondérée · v1.0",
     expand: "Agrandir la grille (plein écran)",
-    sub: "Huit catégories notées de 0 à 100 avec seuils de préparation associé. Critères de prompts/qa-rubric.md ; format de sortie IA de prompts/output-format.md (affiché à la fin — faites défiler).",
+    sub: "Catégories notées de 0 à 100 avec seuils de préparation associé, adaptées au type de fichier téléversé. Le format de sortie IA est affiché à la fin — faites défiler.",
     loading: "Chargement de la grille…",
     additionalRequirements: "Exigences supplémentaires",
     optional: "facultatif",
@@ -37,6 +37,15 @@ export default {
     modalSub: "Critères complets et spécification de sortie du réviseur IA (v1.0)",
     close: "Fermer",
     additionalSection: "Exigences supplémentaires",
+    typeLabel: "Jeu de grille",
+    typeHint:
+      "Sélectionné automatiquement selon vos fichiers téléversés. Modifiez-le pour évaluer avec une autre grille.",
+    typeAuto: "sélectionné automatiquement selon les fichiers",
+    types: {
+      document: "Document (PDF / Word / texte)",
+      excel: "Classeur (Excel / XLSX / CSV)",
+      pptx: "Présentation (PPTX)",
+    },
   },
 
   cta: {

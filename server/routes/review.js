@@ -5,6 +5,10 @@ import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { extractFromUploadedFiles } from "../services/fileParser.js";
 import { runReview } from "../services/gemini.js";
+import {
+  RUBRIC_TYPES,
+  detectRubricType,
+} from "../../shared/rubricTypes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.resolve(__dirname, "../../uploads");
@@ -44,6 +48,11 @@ router.post("/review", upload.array("files", 10), async (req, res) => {
 
     const customRubric = req.body.customRubric || "";
     const lang = req.body.lang === "fr" ? "fr" : "en";
+    // Trust an explicit client selection; otherwise auto-detect from the
+    // uploaded file types (same logic the UI uses for its default).
+    const rubricType = RUBRIC_TYPES.includes(req.body.rubricType)
+      ? req.body.rubricType
+      : detectRubricType(uploaded.map((f) => f.originalname));
     const documents = await extractFromUploadedFiles(uploaded);
 
     const empty = documents.filter((d) => !d.text);
@@ -54,7 +63,7 @@ router.post("/review", upload.array("files", 10), async (req, res) => {
       });
     }
 
-    const result = await runReview({ documents, customRubric, lang });
+    const result = await runReview({ documents, customRubric, lang, rubricType });
     res.json(result);
   } catch (err) {
     console.error(err);
