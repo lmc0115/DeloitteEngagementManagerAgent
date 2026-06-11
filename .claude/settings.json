@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check services/fileParser.js)",
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module -e ' *)"
+    ]
+  }
+}

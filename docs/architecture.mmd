@@ -1,0 +1,72 @@
+flowchart TB
+  subgraph CLIENT["BROWSER — React + Vite (client/src)"]
+    direction TB
+    App["App.jsx<br/>state: files, rubricType, rubricTypeManual,<br/>rubric, customRubric, report, checklistItems, lang"]
+    Upload["FileUpload.jsx"]
+    RPanel["RubricPanel.jsx<br/>(dropdown override + markdown preview)"]
+    RepPanel["ReportPanel.jsx"]
+    CPanel["ChecklistPanel.jsx<br/>(human QC decisions)"]
+    Pdf["PdfExportPanel.jsx"]
+    Lang["LanguageSelector<br/>i18n en/fr"]
+    Detect["utils/rubricTypes.js<br/>detectRubricType()"]
+
+    Upload -- onFilesChange --> App
+    App -- fileNames --> Detect
+    Detect -- auto-switch type --> App
+    RPanel -- manual override --> App
+    App --> RPanel
+    App --> RepPanel
+    App --> CPanel
+    App --> Pdf
+    App --> Lang
+  end
+
+  subgraph SERVER["SERVER — Node + Express (server/), port 3001"]
+    direction TB
+    Index["index.js<br/>/api routers + serves client/dist"]
+    Config["routes/config.js<br/>GET /rubric"]
+    Review["routes/review.js<br/>POST /review (multer)"]
+    Parser["services/fileParser.js<br/>txt/md/csv · pdf · docx · xlsx/pptx"]
+    Gemini["services/gemini.js<br/>readPrompt(base,lang,type) + fallback<br/>buildReviewPrompt + generateWithRetry"]
+
+    Index --> Config
+    Index --> Review
+    Review --> Parser
+    Review --> Gemini
+    Config --> Gemini
+  end
+
+  subgraph SHARED["shared/ (server-side helpers)"]
+    direction TB
+    RTypes["rubricTypes.js"]
+    Split["splitReviewResponse.js"]
+    ParseIssues["parseIssuesFromReport.js"]
+    Prep["prepareReportMarkdown.js"]
+  end
+
+  subgraph PROMPTS["prompts/ (markdown prompt sets)"]
+    direction TB
+    PDoc["qa-rubric[.fr].md<br/>output-format[.fr].md<br/>(document)"]
+    PXls["qa-rubric.excel[.fr].md<br/>output-format.excel[.fr].md<br/>(excel: xlsx/xls/csv)"]
+    PPpt["qa-rubric.pptx[.fr].md<br/>output-format.pptx[.fr].md<br/>(pptx)"]
+    PQc["qc-checklist-prompt[.fr].md<br/>(SHARED, language only)"]
+  end
+
+  Gemini2["Google Gemini API<br/>GEMINI_MODEL + fallbacks"]
+
+  App -- "GET /api/rubric?lang&rubricType" --> Config
+  App -- "POST /api/review (files, rubricType, customRubric, lang)" --> Review
+
+  Gemini --> RTypes
+  Gemini --> Split
+  Gemini --> ParseIssues
+  Gemini --> Prep
+  Gemini -- "type+lang selects" --> PDoc
+  Gemini --> PXls
+  Gemini --> PPpt
+  Gemini --> PQc
+  Gemini -- prompt --> Gemini2
+  Gemini2 -- "report markdown + ---QC_CHECKLIST_JSON---" --> Gemini
+
+  Review -- "{ report, checklistItems, rubricType, lang }" --> App
+  Config -- "{ content, lang, rubricType }" --> App
